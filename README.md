@@ -42,22 +42,28 @@ Hệ thống tích hợp chính xác các quy chuẩn toán học lâm sàng:
 
 ### 1. Quy Đổi Pixel Sang Kích Thước Vật Lý (ArUco Marker Calibration)
 Sử dụng vật chuẩn (ArUco tag 2.0 cm hoặc đồng xu chuẩn) để triệt tiêu biến dạng quang học:
-$$\text{Ratio} = \frac{\text{Kích Thước Vật Chuẩn (cm)}}{\text{Kích Thước Pixel Đếm Được (px)}} \quad (\text{cm/px})$$
-$$\text{Diện Tích Vết Thương } (cm^2) = \text{Tổng Số Pixel Vùng Mặt Cắt Vết Thương} \times \text{Ratio}^2$$
+$$\text{Ratio} = \frac{\text{Known Dimension (cm)}}{\text{Marker Pixels (px)}} \quad (\text{cm/px})$$
+$$\text{Area } (\text{cm}^2) = \text{Mask Pixels} \times \text{Ratio}^2$$
 
 ### 2. Thành Phần Bóc Tách Mô Học (Tissue RYB Proportion)
-$$\text{Tổng Diện Tích Vết Thương} = P_{\text{Red}} + P_{\text{Yellow}} + P_{\text{Black}} + P_{\text{Pink}} = 100\%$$
+$$\text{Total Mask Area} = P_{\text{Red}} + P_{\text{Yellow}} + P_{\text{Black}} + P_{\text{Pink}} = 100\%$$
+
+Trong đó:
+- $P_{\text{Red}}$: Tỷ lệ mô hạt lành (Granulation \%)
+- $P_{\text{Yellow}}$: Tỷ lệ mô vảy (Slough \%)
+- $P_{\text{Black}}$: Tỷ lệ mô hoại tử (Necrotic \%)
+- $P_{\text{Pink}}$: Tỷ lệ biểu mô hóa mép (Epithelial \%)
 
 ### 3. Chỉ Số Sức Khỏe Vết Thương (Wound Health Index — WHI)
 Thang điểm tổng hợp từ 0 đến 100 phản ánh chất lượng nền mô và tốc độ hồi phục:
-$$\text{WHI} = \text{Clamp}_{0}^{100}\left( (\%Red \times 1.0) + (\%Pink \times 1.2) - (\%Yellow \times 1.5) - (\%Black \times 3.0) \right)$$
+$$\text{WHI} = \operatorname{Clamp}_{0}^{100}\left( (P_{\text{Red}} \times 1.0) + (P_{\text{Pink}} \times 1.2) - (P_{\text{Yellow}} \times 1.5) - (P_{\text{Black}} \times 3.0) \right)$$
 
 ### 4. Biến Thiên Phục Hồi Theo Chuỗi Thời Gian (Recovery Delta)
-$$\Delta_{\text{Prev}} = \frac{\text{Area}_{t-1} - \text{Area}_t}{\text{Area}_{t-1}} \times 100\% \quad (\text{\% Giảm so với lần quét trước})$$
-$$\Delta_{\text{Base}} = \frac{\text{Area}_0 - \text{Area}_t}{\text{Area}_0} \times 100\% \quad (\text{\% Giảm so với ngày đầu tiếp nhận})$$
+$$\Delta_{\text{Prev}} = \frac{\text{Area}_{t-1} - \text{Area}_t}{\text{Area}_{t-1}} \times 100\% \quad \text{(\% Giảm so với kỳ trước)}$$
+$$\Delta_{\text{Base}} = \frac{\text{Area}_0 - \text{Area}_t}{\text{Area}_0} \times 100\% \quad \text{(\% Giảm so với ban đầu)}$$
 
 ### 5. Ngưỡng Cảnh Báo Nguy Cơ Hoại Tử Tự Động (Smart Critical Thresholds)
-- **BÁO ĐỘNG ĐỎ CẤP CỨU**: Tự động kích hoạt khi $\%Black \ge 10\%$ HOẶC $\%Yellow \ge 35\%$ (Đưa ra hướng dẫn gọi cấp cứu 115 và bệnh viện ngoại khoa gần nhất để phẫu thuật cắt lọc Debridement).
+- **BÁO ĐỘNG ĐỎ CẤP CỨU**: Tự động kích hoạt khi $P_{\text{Black}} \ge 10\%$ HOẶC $P_{\text{Yellow}} \ge 35\%$ (Đưa ra hướng dẫn gọi cấp cứu 115 và bệnh viện ngoại khoa gần nhất để phẫu thuật cắt lọc Debridement).
 - **CẢNH BÁO TIẾN TRIỂN XẤU**: Tự động kích hoạt khi $\Delta_{\text{Prev}} < -10\%$ (Diện tích vết thương mở rộng bất thường).
 
 ---
