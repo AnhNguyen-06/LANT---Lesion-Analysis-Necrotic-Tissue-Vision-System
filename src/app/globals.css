@@ -1,0 +1,89 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-inter: 'Inter', sans-serif;
+  --font-jetbrains-mono: 'JetBrains Mono', monospace;
+  
+  --oceanic: #002B8C;
+  --dusk: #3E5D8E;
+  --sapphire: #0F52BA;
+  --azure-mist: #F0FFFF;
+  --indigo-contrast: #282888;
+}
+
+body {
+  font-family: var(--font-inter);
+  background-color: #F8FAFC;
+  color: #0F172A;
+  min-height: 100vh;
+}
+
+/* Clinical Glow and Glassmorphism */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(217, 229, 253, 0.8);
+}
+
+.glass-panel-dark {
+  background: rgba(0, 43, 140, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(134, 176, 247, 0.3);
+}
+
+.clinical-border {
+  border-color: #D9E5FD;
+}
+
+/* Custom Scrollbar for Clinical Panels */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #F0FFFF;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #A5BAD2;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3E5D8E;
+}
+
+/* Pulse keyframes for active scanning */
+@keyframes laserScan {
+  0% {
+    top: 0%;
+    opacity: 0.8;
+  }
+  50% {
+    top: 100%;
+    opacity: 1;
+  }
+  100% {
+    top: 0%;
+    opacity: 0.8;
+  }
+}
+
+.animate-laser-scan {
+  animation: laserScan 3s ease-in-out infinite;
+}
+
+/* Grid background for medical calibration */
+.bg-calibration-grid {
+  background-size: 24px 24px;
+  background-image: 
+    linear-gradient(to right, rgba(0, 43, 140, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 43, 140, 0.05) 1px, transparent 1px);
+}
