@@ -72,19 +72,21 @@ $$
 
 ### 4. Biến Thiên Phục Hồi Theo Chuỗi Thời Gian (Recovery Delta)
 
+- Tỷ lệ % diện tích giảm so với lần quét trước:
+
 $$
 \Delta_{\text{Prev}} = \frac{\text{Area}_{t-1} - \text{Area}_t}{\text{Area}_{t-1}} \times 100
 $$
-*(Tỷ lệ % diện tích giảm so với lần quét trước)*
+
+- Tỷ lệ % diện tích giảm so với ngày đầu tiếp nhận:
 
 $$
 \Delta_{\text{Base}} = \frac{\text{Area}_0 - \text{Area}_t}{\text{Area}_0} \times 100
 $$
-*(Tỷ lệ % diện tích giảm so với ngày đầu tiếp nhận)*
 
 ### 5. Ngưỡng Cảnh Báo Nguy Cơ Hoại Tử Tự Động (Smart Critical Thresholds)
-- **BÁO ĐỘNG ĐỎ CẤP CỨU**: Tự động kích hoạt khi $P_{\text{Black}} \ge 10\%$ HOẶC $P_{\text{Yellow}} \ge 35\%$ (Đưa ra hướng dẫn gọi cấp cứu 115 và bệnh viện ngoại khoa gần nhất để phẫu thuật cắt lọc Debridement).
-- **CẢNH BÁO TIẾN TRIỂN XẤU**: Tự động kích hoạt khi $\Delta_{\text{Prev}} < -10\%$ (Diện tích vết thương mở rộng bất thường).
+- **BÁO ĐỘNG ĐỎ CẤP CỨU**: Tự động kích hoạt khi $P_{\text{Black}} \ge 10$% HOẶC $P_{\text{Yellow}} \ge 35$% (Đưa ra hướng dẫn gọi cấp cứu 115 và bệnh viện ngoại khoa gần nhất để phẫu thuật cắt lọc Debridement).
+- **CẢNH BÁO TIẾN TRIỂN XẤU**: Tự động kích hoạt khi $\Delta_{\text{Prev}} < -10$% (Diện tích vết thương mở rộng bất thường).
 
 ---
 

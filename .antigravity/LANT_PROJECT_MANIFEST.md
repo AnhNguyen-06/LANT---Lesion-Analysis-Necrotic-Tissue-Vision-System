@@ -54,17 +54,21 @@ $$
 
 ### 4. Recovery Delta
 
+- Tỷ lệ % diện tích giảm so với lần quét trước:
+
 $$
 \Delta_{\text{Prev}} = \frac{\text{Area}_{t-1} - \text{Area}_t}{\text{Area}_{t-1}} \times 100
 $$
+
+- Tỷ lệ % diện tích giảm so với ngày đầu tiếp nhận:
 
 $$
 \Delta_{\text{Base}} = \frac{\text{Area}_0 - \text{Area}_t}{\text{Area}_0} \times 100
 $$
 
 ### 5. Smart Critical Alert Thresholds
-- **EMERGENCY CRITICAL**: $P_{\text{Black}} \ge 10\%$ OR $P_{\text{Yellow}} \ge 35\%$
-- **WARNING ALERT**: $\Delta_{\text{Prev}} < -10\%$ (Wound area expanding)
+- **EMERGENCY CRITICAL**: $P_{\text{Black}} \ge 10$% OR $P_{\text{Yellow}} \ge 35$%
+- **WARNING ALERT**: $\Delta_{\text{Prev}} < -10$% (Wound area expanding)
 
 ---
 
