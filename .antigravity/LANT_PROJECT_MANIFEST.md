@@ -24,18 +24,36 @@
 
 ## 3. CLINICAL MATHEMATICAL FORMULAS
 1. **Pixel-to-Physical Calibration**:
-   $$\text{Ratio} = \frac{\text{Known Dimension (cm)}}{\text{Marker Pixels (px)}} \quad (\text{cm/px})$$
-   $$\text{Area } (\text{cm}^2) = \text{Wound Mask Pixels} \times \text{Ratio}^2$$
+
+   $$
+   \text{Ratio} = \frac{\text{Known Dimension (cm)}}{\text{Marker Pixels (px)}}
+   $$
+
+   $$
+   \text{Area (cm}^2\text{)} = \text{Wound Mask Pixels} \times \text{Ratio}^2
+   $$
 
 2. **Tissue RYB Composition**:
-   $$\text{Total Mask Area} = P_{\text{Red}} + P_{\text{Yellow}} + P_{\text{Black}} + P_{\text{Pink}} = 100\%$$
+
+   $$
+   \text{Total Mask Area} = P_{\text{Red}} + P_{\text{Yellow}} + P_{\text{Black}} + P_{\text{Pink}} = 100
+   $$
 
 3. **Wound Health Index (WHI)**:
-   $$\text{WHI} = \operatorname{Clamp}_{0}^{100}\left( (P_{\text{Red}} \times 1.0) + (P_{\text{Pink}} \times 1.2) - (P_{\text{Yellow}} \times 1.5) - (P_{\text{Black}} \times 3.0) \right)$$
+
+   $$
+   \text{WHI} = \text{Clamp}_{0}^{100}\left( (P_{\text{Red}} \times 1.0) + (P_{\text{Pink}} \times 1.2) - (P_{\text{Yellow}} \times 1.5) - (P_{\text{Black}} \times 3.0) \right)
+   $$
 
 4. **Recovery Delta**:
-   $$\Delta_{\text{Prev}} = \frac{\text{Area}_{t-1} - \text{Area}_t}{\text{Area}_{t-1}} \times 100\%$$
-   $$\Delta_{\text{Base}} = \frac{\text{Area}_0 - \text{Area}_t}{\text{Area}_0} \times 100\%$$
+
+   $$
+   \Delta_{\text{Prev}} = \frac{\text{Area}_{t-1} - \text{Area}_t}{\text{Area}_{t-1}} \times 100
+   $$
+
+   $$
+   \Delta_{\text{Base}} = \frac{\text{Area}_0 - \text{Area}_t}{\text{Area}_0} \times 100
+   $$
 
 5. **Smart Critical Alert Thresholds**:
    - **EMERGENCY CRITICAL**: $P_{\text{Black}} \ge 10\%$ OR $P_{\text{Yellow}} \ge 35\%$
