@@ -23,41 +23,48 @@
 ---
 
 ## 3. CLINICAL MATHEMATICAL FORMULAS
-1. **Pixel-to-Physical Calibration**:
 
-   $$
-   \text{Ratio} = \frac{\text{Known Dimension (cm)}}{\text{Marker Pixels (px)}}
-   $$
+### 1. Pixel-to-Physical Calibration
 
-   $$
-   \text{Area (cm}^2\text{)} = \text{Wound Mask Pixels} \times \text{Ratio}^2
-   $$
+$$
+\text{Ratio} = \frac{\text{Known Dimension (cm)}}{\text{Marker Pixels (px)}}
+$$
 
-2. **Tissue RYB Composition**:
+$$
+\text{Area (cm}^2\text{)} = \text{Wound Mask Pixels} \times \text{Ratio}^2
+$$
 
-   $$
-   \text{Total Mask Area} = P_{\text{Red}} + P_{\text{Yellow}} + P_{\text{Black}} + P_{\text{Pink}} = 100
-   $$
+### 2. Tissue RYB Composition
 
-3. **Wound Health Index (WHI)**:
+$$
+\text{Total Mask Area} = P_{\text{Red}} + P_{\text{Yellow}} + P_{\text{Black}} + P_{\text{Pink}} = 100
+$$
 
-   $$
-   \text{WHI} = \text{Clamp}_{0}^{100}\left( (P_{\text{Red}} \times 1.0) + (P_{\text{Pink}} \times 1.2) - (P_{\text{Yellow}} \times 1.5) - (P_{\text{Black}} \times 3.0) \right)
-   $$
+Trong đó:
+- $P_{\text{Red}}$: Tỷ lệ mô hạt (Granulation)
+- $P_{\text{Yellow}}$: Tỷ lệ mô vảy (Slough)
+- $P_{\text{Black}}$: Tỷ lệ mô hoại tử (Necrotic)
+- $P_{\text{Pink}}$: Tỷ lệ biểu mô hóa (Epithelial)
 
-4. **Recovery Delta**:
+### 3. Wound Health Index (WHI)
 
-   $$
-   \Delta_{\text{Prev}} = \frac{\text{Area}_{t-1} - \text{Area}_t}{\text{Area}_{t-1}} \times 100
-   $$
+$$
+\text{WHI} = \text{Clamp}_{0}^{100}\left( (P_{\text{Red}} \times 1.0) + (P_{\text{Pink}} \times 1.2) - (P_{\text{Yellow}} \times 1.5) - (P_{\text{Black}} \times 3.0) \right)
+$$
 
-   $$
-   \Delta_{\text{Base}} = \frac{\text{Area}_0 - \text{Area}_t}{\text{Area}_0} \times 100
-   $$
+### 4. Recovery Delta
 
-5. **Smart Critical Alert Thresholds**:
-   - **EMERGENCY CRITICAL**: $P_{\text{Black}} \ge 10\%$ OR $P_{\text{Yellow}} \ge 35\%$
-   - **WARNING ALERT**: $\Delta_{\text{Prev}} < -10\%$ (Wound area expanding)
+$$
+\Delta_{\text{Prev}} = \frac{\text{Area}_{t-1} - \text{Area}_t}{\text{Area}_{t-1}} \times 100
+$$
+
+$$
+\Delta_{\text{Base}} = \frac{\text{Area}_0 - \text{Area}_t}{\text{Area}_0} \times 100
+$$
+
+### 5. Smart Critical Alert Thresholds
+- **EMERGENCY CRITICAL**: $P_{\text{Black}} \ge 10\%$ OR $P_{\text{Yellow}} \ge 35\%$
+- **WARNING ALERT**: $\Delta_{\text{Prev}} < -10\%$ (Wound area expanding)
 
 ---
 
