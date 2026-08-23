@@ -44,10 +44,10 @@ export function evaluateHazardStatus(
   const reasons: string[] = [];
 
   if (ryb.blackPercent >= 10) {
-    reasons.push(`CẢNH BÁO HOẠI TỬ NGUY HIỂM: Mô hoại tử đen (Eschar) đạt ${ryb.blackPercent.toFixed(1)}% (ngưỡng an toàn < 10%). Cần can thiệp cắt lọc y tế khẩn.`);
+    reasons.push(`Cảnh báo hoại tử nguy hiểm: Mô hoại tử đen (Eschar) đạt ${ryb.blackPercent.toFixed(1)}% (ngưỡng an toàn < 10%). Cần can thiệp cắt lọc y tế khẩn.`);
   }
   if (ryb.yellowPercent >= 35) {
-    reasons.push(`NGUY CƠ NHIỄM TRÙNG CAO: Mô vảy vàng (Slough / Bio-film) chiếm ${ryb.yellowPercent.toFixed(1)}% (ngưỡng an toàn < 35%).`);
+    reasons.push(`Nguy cơ nhiễm trùng cao: Mô vảy vàng (Slough / bio-film) chiếm ${ryb.yellowPercent.toFixed(1)}% (ngưỡng an toàn < 35%).`);
   }
 
   if (reasons.length > 0) {
@@ -55,7 +55,7 @@ export function evaluateHazardStatus(
   }
 
   if (deltaPrevPercent < -10) {
-    reasons.push(`TIẾN TRIỂN XẤU: Diện tích vết thương đang mở rộng thêm ${Math.abs(deltaPrevPercent).toFixed(1)}% so với lần quét trước.`);
+    reasons.push(`Tiến triển xấu: Diện tích vết thương đang mở rộng thêm ${Math.abs(deltaPrevPercent).toFixed(1)}% so với lần quét trước.`);
     return { status: "warning", reasons };
   }
 
@@ -68,18 +68,18 @@ export function evaluateHazardStatus(
 export function generateDressingRecommendation(ryb: RYBMetrics, exudate: string): DressingRecommendation {
   if (ryb.blackPercent >= 10) {
     return {
-      primaryDressing: "Băng Gel Thủy Ngân (Hydrogel / Purilon Gel) kết hợp Băng film bán thấm",
-      secondaryDressing: "Gạc vô trùng đệm xốp Foam không dính (Bordered Foam)",
+      primaryDressing: "Băng gel thủy ngân (Hydrogel / Purilon Gel) kết hợp băng film bán thấm",
+      secondaryDressing: "Gạc vô trùng đệm xốp foam không dính (Bordered Foam)",
       changeFrequency: "Mỗi 24 - 48 giờ hoặc khi gel hút no dịch",
-      clinicalRationale: "Mô hoại tử đen (Eschar) cần cơ chế tự tiêu (Autolytic Debridement) nhờ độ ẩm từ Hydrogel làm mềm mô chết mà không tổn hại mô hạt lành lân cận.",
+      clinicalRationale: "Mô hoại tử đen (Eschar) cần cơ chế tự tiêu (Autolytic Debridement) nhờ độ ẩm từ hydrogel làm mềm mô chết mà không tổn hại mô hạt lành lân cận.",
       cleaningProtocol: [
         "Rửa nhẹ bằng nước muối sinh lý NaCl 0.9% hoặc dung dịch Betadine pha loãng 1:10.",
         "Không dùng oxy già (H2O2) trực tiếp lên mô non.",
-        "Bôi lớp Hydrogel dày 3-5mm phủ trọn vùng mô đen.",
+        "Bôi lớp hydrogel dày 3-5mm phủ trọn vùng mô đen.",
         "Cố định bằng gạc xốp và dán băng keo y tế không gây dị ứng."
       ],
       warningNotices: [
-        "KHÔNG tự ý bóc vảy đen bằng tay hoặc kéo chưa qua tiệt trùng.",
+        "Không tự ý bóc vảy đen bằng tay hoặc kéo chưa qua tiệt trùng.",
         "Đến bệnh viện ngay nếu xuất hiện sốt cao (>38.5°C) hoặc vệt đỏ lan ra xung quanh mép da."
       ],
       otcProducts: ["Purilon Gel (Coloplast)", "Duoderm Hydroactive Gel", "Biatain Non-Adhesive Foam"]
@@ -88,15 +88,15 @@ export function generateDressingRecommendation(ryb: RYBMetrics, exudate: string)
 
   if (ryb.yellowPercent >= 25) {
     return {
-      primaryDressing: "Băng Gạc Alginate Bạc Kháng Khuẩn (Silver Alginate / Aquacel Ag+)",
-      secondaryDressing: "Băng dán bọt xốp Hydrocellular Foam hấp thụ dịch cao",
+      primaryDressing: "Băng gạc alginate bạc kháng khuẩn (Silver Alginate / Aquacel Ag+)",
+      secondaryDressing: "Băng dán bọt xốp hydrocellular foam hấp thụ dịch cao",
       changeFrequency: "Mỗi 24 - 48 giờ (tùy lượng dịch tiết rỉ ra băng)",
-      clinicalRationale: "Mô vảy vàng chứa sợi fibrin, vi khuẩn và dịch viêm. Alginate chiết xuất từ rong biển kết hợp ion Bạc (Ag+) giúp kháng khuẩn tại chỗ, hút dịch xuất tiết tạo gel mềm bảo vệ nền vết thương.",
+      clinicalRationale: "Mô vảy vàng chứa sợi fibrin, vi khuẩn và dịch viêm. Alginate chiết xuất từ rong biển kết hợp ion bạc (Ag+) giúp kháng khuẩn tại chỗ, hút dịch xuất tiết tạo gel mềm bảo vệ nền vết thương.",
       cleaningProtocol: [
         "Bơm rửa vết thương bằng dung dịch sát khuẩn chuyên dụng Prontosan hoặc Hypochlorous Acid.",
         "Dùng gạc ẩm lau nhẹ nhàng để lấy bớt lớp dịch nhầy lỏng.",
         "Đặt miếng gạc Silver Alginate vừa vặn vào lòng vết thương (không đè lên rìa da lành).",
-        "Phủ băng ngoài bằng Hydrocellular Foam."
+        "Phủ băng ngoài bằng hydrocellular foam."
       ],
       warningNotices: [
         "Theo dõi màu sắc dịch rỉ (nếu có mủ xanh, mùi hôi đậm cần hội chẩn bác sĩ).",
@@ -108,7 +108,7 @@ export function generateDressingRecommendation(ryb: RYBMetrics, exudate: string)
 
   if (ryb.redPercent >= 50) {
     return {
-      primaryDressing: "Băng Dán Bọt Xốp Polyurethane (Hydrocellular Foam / Allevyn)",
+      primaryDressing: "Băng dán bọt xốp polyurethane (Hydrocellular Foam / Allevyn)",
       secondaryDressing: "Màng phim PU chống nước bảo vệ bên ngoài (Opsite Flexigrid)",
       changeFrequency: "Mỗi 3 - 5 ngày (hạn chế thay băng quá nhiều để tránh xáo trộn nền mô hạt)",
       clinicalRationale: "Mô hạt đỏ giàu mao mạch mới rất nhạy cảm. Foam dressing duy trì nhiệt độ và vi khí hậu ẩm sinh lý lý tưởng, kích thích các tế bào biểu mô di chuyển khép miệng vết thương.",
@@ -119,14 +119,14 @@ export function generateDressingRecommendation(ryb: RYBMetrics, exudate: string)
       ],
       warningNotices: [
         "Tránh tì đè lực cơ học trực tiếp lên vùng mô hạt.",
-        "Bổ sung chế độ ăn giàu đạm (Protein), Vitamin C và Kẽm để tăng tổng hợp Collagen."
+        "Bổ sung chế độ ăn giàu đạm (Protein), Vitamin C và kẽm để tăng tổng hợp collagen."
       ],
       otcProducts: ["Allevyn Gentle Border", "Mepilex Lite", "DuoDERM Extra Thin"]
     };
   }
 
   return {
-    primaryDressing: "Băng Hydrocolloid mỏng (Hydrocolloid Thin) hoặc Gạc Silicon không dính",
+    primaryDressing: "Băng hydrocolloid mỏng (Hydrocolloid Thin) hoặc gạc silicon không dính",
     secondaryDressing: "Băng dán vô trùng chống thấm",
     changeFrequency: "Mỗi 4 - 7 ngày (giữ băng đến khi tự bong nhẹ)",
     clinicalRationale: "Vết thương ở pha biểu mô hóa cuối cùng. Băng dán hydrocolloid mỏng bảo vệ tế bào vảy mới sinh và ngăn ngừa sẹo phì đại.",
@@ -160,7 +160,7 @@ export interface ClinicalPresetCase {
 export const CLINICAL_PRESETS: ClinicalPresetCase[] = [
   {
     id: "case-dfu",
-    name: "Loét Bàn Chân Đái Tháo Đường (Wagner Độ II)",
+    name: "Loét bàn chân đái tháo đường (Wagner độ II)",
     location: "Gót chân trái (Left Plantar Heel)",
     etiology: "diabetic_foot",
     rawImage: "/presets/diabetic_foot.jpg",
@@ -170,7 +170,7 @@ export const CLINICAL_PRESETS: ClinicalPresetCase[] = [
   },
   {
     id: "case-surgical",
-    name: "Hở Vết Mổ Sau Phẫu Thuật Thành Bụng",
+    name: "Hở vết mổ sau phẫu thuật thành bụng",
     location: "Thành bụng dưới (Lower Abdominal Midline)",
     etiology: "surgical_dehiscence",
     rawImage: "/presets/surgical_wound.jpg",
@@ -180,7 +180,7 @@ export const CLINICAL_PRESETS: ClinicalPresetCase[] = [
   },
   {
     id: "case-pressure",
-    name: "Loét Tì Đè Vùng Xương Cùng (Giai đoạn III)",
+    name: "Loét tì đè vùng xương cùng (Giai đoạn III)",
     location: "Vùng cùng cụt (Sacral Region)",
     etiology: "pressure_injury",
     rawImage: "/presets/pressure_injury.jpg",
@@ -190,7 +190,7 @@ export const CLINICAL_PRESETS: ClinicalPresetCase[] = [
   },
   {
     id: "case-burn",
-    name: "Bỏng Nước Sôi Độ II Nông Đang Biểu Mô Hóa",
+    name: "Bỏng nước sôi độ II nông đang biểu mô hóa",
     location: "Cẳng tay phải (Right Forearm)",
     etiology: "burn_trauma",
     rawImage: "/presets/burn_wound.jpg",

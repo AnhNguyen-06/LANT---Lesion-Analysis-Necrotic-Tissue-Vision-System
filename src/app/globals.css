@@ -1,13 +1,8 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --font-inter: 'Inter', sans-serif;
-  --font-jetbrains-mono: 'JetBrains Mono', monospace;
-  
   --oceanic: #002B8C;
   --dusk: #3E5D8E;
   --sapphire: #0F52BA;
@@ -16,32 +11,45 @@
 }
 
 body {
-  font-family: var(--font-inter);
+  font-family: var(--font-poppins), system-ui, sans-serif;
   background-color: #F8FAFC;
+  background-image: url('/medical-bg-pattern.jpg');
+  background-repeat: repeat;
+  background-size: 100% auto;
+  background-attachment: fixed;
   color: #0F172A;
   min-height: 100vh;
 }
 
-/* Clinical Glow and Glassmorphism */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-montserrat), system-ui, sans-serif;
+  letter-spacing: -0.02em;
+}
+
+.font-editorial {
+  font-family: var(--font-playfair), Georgia, serif;
+}
+
+.font-mono-data {
+  font-family: var(--font-mono), monospace;
+}
+
+/* Glassmorphism Panels with soft white backing */
 .glass-panel {
-  background: rgba(255, 255, 255, 0.88);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(217, 229, 253, 0.8);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(217, 229, 253, 0.85);
 }
 
 .glass-panel-dark {
-  background: rgba(0, 43, 140, 0.92);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(0, 43, 140, 0.94);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(134, 176, 247, 0.3);
 }
 
-.clinical-border {
-  border-color: #D9E5FD;
-}
-
-/* Custom Scrollbar for Clinical Panels */
+/* Custom Scrollbar for Medical Panels */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -58,32 +66,4 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #3E5D8E;
-}
-
-/* Pulse keyframes for active scanning */
-@keyframes laserScan {
-  0% {
-    top: 0%;
-    opacity: 0.8;
-  }
-  50% {
-    top: 100%;
-    opacity: 1;
-  }
-  100% {
-    top: 0%;
-    opacity: 0.8;
-  }
-}
-
-.animate-laser-scan {
-  animation: laserScan 3s ease-in-out infinite;
-}
-
-/* Grid background for medical calibration */
-.bg-calibration-grid {
-  background-size: 24px 24px;
-  background-image: 
-    linear-gradient(to right, rgba(0, 43, 140, 0.05) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(0, 43, 140, 0.05) 1px, transparent 1px);
 }

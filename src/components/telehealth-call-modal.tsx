@@ -1,35 +1,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { 
-  PhoneOff, 
-  Mic, 
-  MicOff, 
-  Video, 
-  VideoOff, 
-  Sparkles, 
-  FileText, 
-  CheckCircle2, 
-  Share2, 
-  Stethoscope, 
-  Layers, 
-  User, 
-  Edit3, 
-  Lock,
-  Clock,
-  ShieldCheck,
-  X
-} from "lucide-react";
-import { Patient, WoundProfile, SnapshotLog, ClinicianReview } from "@/types/medical-schema";
-import { MockStorageService } from "@/lib/mock-storage";
 import { WoundCanvas } from "./wound-canvas";
+import { Patient, WoundProfile, SnapshotLog } from "@/types/medical-schema";
 
 interface TelehealthCallModalProps {
   isOpen: boolean;
   onClose: () => void;
   patient: Patient;
   wound: WoundProfile;
-  latestSnapshot: SnapshotLog;
+  activeSnapshot: SnapshotLog;
+  onSignSoap: (assessment: string, plan: string) => void;
 }
 
 export function TelehealthCallModal({
@@ -37,309 +18,278 @@ export function TelehealthCallModal({
   onClose,
   patient,
   wound,
-  latestSnapshot
+  activeSnapshot,
+  onSignSoap,
 }: TelehealthCallModalProps) {
-  const [isMicOn, setIsMicOn] = useState(true);
-  const [isVideoOn, setIsVideoOn] = useState(true);
-  const [callDuration, setCallDuration] = useState(145); // seconds
-  const [isAiGenerating, setIsAiGenerating] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+  const [isVideoOff, setIsVideoOff] = useState(false);
+  const [activeTab, setActiveTab] = useState<"canvas" | "chat" | "soap">("canvas");
+  const [callDuration, setCallDuration] = useState(0);
+
+  // SOAP state inside consultation
+  const [assessment, setAssessment] = useState(
+    `Vết thương ${wound.title} tiến triển khả quan, diện tích hiện tại ${activeSnapshot.totalAreaCm2} cm² (giảm so với ban đầu). Tỷ lệ mô hạt đỏ ${activeSnapshot.rybMetrics.redPercent}% chiếm ưu thế.`
+  );
+  const [plan, setPlan] = useState(
+    `Tiếp tục dùng ${activeSnapshot.recommendation.primaryDressing}. Rửa vết thương bằng nước muối sinh lý 0.9%, thay băng ${activeSnapshot.recommendation.changeFrequency}. Tái khám sau 7 ngày.`
+  );
   const [isSigned, setIsSigned] = useState(false);
 
-  // SOAP Note Form State
-  const [soapSubjective, setSoapSubjective] = useState(
-    `Bệnh nhân ${patient.fullName} (${patient.age} tuổi) báo mức độ đau hiện tại VAS ${latestSnapshot.survey.painScore}/10. Vết thương không còn cảm giác đau nhức âm ỉ ban đêm. Băng phụ không bị rò dịch ướt.`
-  );
-  const [soapObjective] = useState(
-    `Diện tích đo đạc ArUco: ${latestSnapshot.totalAreaCm2} cm² (giảm ${latestSnapshot.deltaBasePercent}% so với ban đầu). Tỷ lệ mô RYB: Đỏ (Mô hạt) ${latestSnapshot.rybMetrics.redPercent}%, Vàng (Slough) ${latestSnapshot.rybMetrics.yellowPercent}%, Đen (Hoại tử) ${latestSnapshot.rybMetrics.blackPercent}%, Hồng (Biểu mô) ${latestSnapshot.rybMetrics.pinkPercent}%. Điểm WHI: ${latestSnapshot.whiScore}/100.`
-  );
-  const [soapAssessment, setSoapAssessment] = useState(
-    `Loét bàn chân tiến triển thuận lợi vào pha tăng sinh mô hạt và biểu mô hóa mép. Không có dấu hiệu viêm mô tế bào (Cellulitis) quanh bờ mép.`
-  );
-  const [soapPlan, setSoapPlan] = useState(
-    `1. Tiếp tục duy trì băng dán bọt xốp Allevyn Non-Adhesive Foam, thay băng mỗi 3 ngày.\n2. Rửa nhẹ nhàng bằng NaCl 0.9% ấm trước khi dán băng mới.\n3. Duy trì mang dép chỉnh hình giảm tải áp lực khi đi lại trong nhà.\n4. Tái khám và chụp quét cập nhật sau 7 ngày.`
-  );
+  // Chat message state
+  const [chatMessages, setChatMessages] = useState<Array<{ sender: string; text: string; time: string }>>([
+    { sender: "Hệ thống", text: "Phiên hội chẩn telehealth bảo mật E2EE đã bắt đầu.", time: "10:00" },
+    { sender: patient.fullName, text: "Chào bác sĩ, hôm nay chân em đỡ đau hơn rồi ạ.", time: "10:01" },
+    { sender: "BS. CKI Trần Minh Đức", text: "Chào bác An, tôi đang xem hình ảnh quét mới nhất của bác đây.", time: "10:02" }
+  ]);
+  const [inputMessage, setInputMessage] = useState("");
 
-  // Call timer ticker
+  // Timer
   useEffect(() => {
     if (!isOpen) return;
-    const timer = setInterval(() => {
-      setCallDuration((prev) => prev + 1);
+    const interval = setInterval(() => {
+      setCallDuration(prev => prev + 1);
     }, 1000);
-    return () => clearInterval(timer);
+    return () => clearInterval(interval);
   }, [isOpen]);
 
   if (!isOpen) return null;
 
-  const formatTimer = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+  const formatDuration = (sec: number) => {
+    const mins = Math.floor(sec / 60).toString().padStart(2, "0");
+    const secs = (sec % 60).toString().padStart(2, "0");
+    return `${mins}:${secs}`;
   };
 
-  const handleApproveAndSign = () => {
-    const newReview: ClinicianReview = {
-      id: `REV-${wound.id}-${Date.now()}`,
-      patientId: patient.id,
-      woundId: wound.id,
-      snapshotId: latestSnapshot.id,
-      clinicianName: "BS. CKI Trần Minh Đức",
-      clinicianTitle: "Chuyên khoa Chăm sóc Vết thương & Phẫu thuật Chấn thương",
-      date: new Date().toISOString(),
-      soapSubjective,
-      soapObjective,
-      soapAssessment,
-      soapPlan,
-      approved: true,
-      signedAt: new Date().toISOString()
-    };
+  const handleSendMessage = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputMessage.trim()) return;
+    setChatMessages(prev => [
+      ...prev,
+      {
+        sender: "BS. CKI Trần Minh Đức",
+        text: inputMessage,
+        time: new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })
+      }
+    ]);
+    setInputMessage("");
+  };
 
-    MockStorageService.addReview(newReview);
+  const handleApprove = () => {
+    onSignSoap(assessment, plan);
     setIsSigned(true);
     setTimeout(() => {
-      onClose();
+      setIsSigned(false);
     }, 1500);
   };
 
-  const handleRegenerateAiSummary = () => {
-    setIsAiGenerating(true);
-    setTimeout(() => {
-      setSoapAssessment(
-        `AI ĐÃ TỐI ƯU HÓA: Tốc độ co nhỏ diện tích đạt ${latestSnapshot.deltaBasePercent}%. Nền mô sạch 100% hoại tử đen, biểu mô hóa đang tiến dần từ bờ mép. Đáp ứng tốt với phác đồ kiểm soát đường huyết hiện tại.`
-      );
-      setIsAiGenerating(false);
-    }, 1000);
-  };
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-2 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
-      <div className="relative w-full max-w-6xl rounded-2xl border border-oceanic-300 bg-white p-4 sm:p-6 shadow-2xl my-auto animate-in zoom-in-95 duration-200 flex flex-col max-h-[92vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in font-sans">
+      <div className="relative w-full max-w-6xl h-[88vh] rounded-3xl bg-white shadow-2xl flex flex-col overflow-hidden border border-oceanic-100/70">
         
-        {/* Header Bar */}
-        <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4 shrink-0">
+        {/* Top Control Bar */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-white/95">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-oceanic text-white shadow-sm">
-              <Stethoscope className="h-5 w-5 text-azure-mist" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-base font-extrabold text-oceanic">Hội Chẩn Telehealth Y Khoa Trực Tuyến</span>
-                <span className="rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800 border border-emerald-300 flex items-center gap-1">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 animate-ping" />
-                  MÃ HÓA E2EE CHUẨN HIPAA
-                </span>
-              </div>
-              <p className="text-xs text-dusk-500">
-                Bệnh nhân: <strong className="text-slate-800">{patient.fullName}</strong> ({patient.age}t • {patient.medicalRecordNumber}) • Bác sĩ: <strong>BS. CKI Trần Minh Đức</strong>
-              </p>
-            </div>
+            <span className="text-lg font-bold text-oceanic font-heading">
+              Phòng hội chẩn telehealth: {patient.fullName}
+            </span>
+            <span className="rounded-full bg-emerald-50 text-emerald-700 px-3 py-0.5 text-xs font-mono font-bold">
+              {formatDuration(callDuration)}
+            </span>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5 rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-mono font-bold text-slate-800">
-              <Clock className="h-3.5 w-3.5 text-oceanic" />
-              <span>{formatTimer(callDuration)}</span>
-            </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsMuted(!isMuted)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                isMuted ? "bg-red-50 text-red-700 border border-red-200" : "bg-slate-100 text-slate-700"
+              }`}
+            >
+              <span>{isMuted ? "Đã tắt mic" : "Mic bật"}</span>
+            </button>
+
+            <button
+              onClick={() => setIsVideoOff(!isVideoOff)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                isVideoOff ? "bg-red-50 text-red-700 border border-red-200" : "bg-slate-100 text-slate-700"
+              }`}
+            >
+              <span>{isVideoOff ? "Camera tắt" : "Camera bật"}</span>
+            </button>
+
             <button
               onClick={onClose}
-              className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+              className="px-4 py-1.5 rounded-xl bg-red-600 text-white text-xs font-bold hover:bg-red-700 transition-all"
             >
-              <X className="h-5 w-5" />
+              <span>Kết thúc cuộc gọi</span>
             </button>
           </div>
         </div>
 
-        {/* Main Split Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1 overflow-y-auto pr-1">
+        {/* Main Grid: Video Stream + Clinical Toolset */}
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 overflow-hidden">
           
-          {/* Left Column: Simulated Video Call & Synchronized Wound Canvas (7 Cols) */}
-          <div className="lg:col-span-7 space-y-4">
+          {/* Left: Video Streams (6 Cols) */}
+          <div className="lg:col-span-6 bg-slate-950 p-6 flex flex-col justify-between space-y-4 overflow-y-auto">
             
-            {/* Split Video Streams */}
-            <div className="grid grid-cols-2 gap-2">
-              {/* Doctor Video Mock */}
-              <div className="relative rounded-xl overflow-hidden bg-slate-900 aspect-video border border-slate-800 flex items-center justify-center">
-                <div className="flex flex-col items-center justify-center text-center p-3">
-                  <div className="h-12 w-12 rounded-full bg-oceanic-700 border-2 border-cyan-400 flex items-center justify-center text-white font-bold text-sm mb-1">
-                    BS.Đ
-                  </div>
-                  <span className="text-xs font-bold text-white">BS. CKI Trần Minh Đức</span>
-                  <span className="text-[10px] text-cyan-300">Chuyên khoa Chăm sóc Vết thương</span>
-                </div>
-                <span className="absolute bottom-2 left-2 rounded bg-black/60 px-1.5 py-0.5 text-[9px] font-mono text-emerald-400">
-                  HD 1080p • 60fps
-                </span>
-              </div>
-
-              {/* Patient Video Mock */}
-              <div className="relative rounded-xl overflow-hidden bg-slate-900 aspect-video border border-slate-800 flex items-center justify-center">
-                <div className="flex flex-col items-center justify-center text-center p-3">
-                  <div className="h-12 w-12 rounded-full bg-slate-700 border-2 border-emerald-400 flex items-center justify-center text-white font-bold text-sm mb-1">
+            {/* Main Patient Video View */}
+            <div className="relative flex-1 rounded-2xl bg-slate-900 overflow-hidden flex items-center justify-center min-h-[220px]">
+              {!isVideoOff ? (
+                <div className="text-center space-y-2 p-6">
+                  <div className="h-16 w-16 rounded-2xl bg-oceanic text-white text-2xl font-bold flex items-center justify-center mx-auto">
                     {patient.fullName.charAt(0)}
                   </div>
-                  <span className="text-xs font-bold text-white">{patient.fullName}</span>
-                  <span className="text-[10px] text-slate-300">Đang kết nối tại gia</span>
+                  <p className="text-xs font-bold text-white font-heading">{patient.fullName} (Bệnh nhân)</p>
+                  <span className="text-[10px] text-emerald-400 font-mono">Đang truyền video trực tiếp (720p)</span>
                 </div>
-                <span className="absolute bottom-2 left-2 rounded bg-black/60 px-1.5 py-0.5 text-[9px] font-mono text-emerald-400">
-                  PATIENT STREAM • STERILE MIC
-                </span>
-              </div>
+              ) : (
+                <div className="text-center text-slate-500 text-xs">Camera bệnh nhân đang tắt</div>
+              )}
             </div>
 
-            {/* Video Controls Toolbar */}
-            <div className="flex items-center justify-center gap-3 bg-slate-900 p-2.5 rounded-xl border border-slate-800">
-              <button
-                onClick={() => setIsMicOn(!isMicOn)}
-                className={`p-2.5 rounded-full transition-colors ${
-                  isMicOn ? "bg-slate-700 text-white hover:bg-slate-600" : "bg-red-600 text-white"
-                }`}
-                title={isMicOn ? "Tắt mic" : "Bật mic"}
-              >
-                {isMicOn ? <Mic className="h-4 w-4" /> : <MicOff className="h-4 w-4" />}
-              </button>
-
-              <button
-                onClick={() => setIsVideoOn(!isVideoOn)}
-                className={`p-2.5 rounded-full transition-colors ${
-                  isVideoOn ? "bg-slate-700 text-white hover:bg-slate-600" : "bg-red-600 text-white"
-                }`}
-                title={isVideoOn ? "Tắt camera" : "Bật camera"}
-              >
-                {isVideoOn ? <Video className="h-4 w-4" /> : <VideoOff className="h-4 w-4" />}
-              </button>
-
-              <button
-                onClick={onClose}
-                className="flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-4 py-2 rounded-full transition-colors"
-              >
-                <PhoneOff className="h-4 w-4" />
-                <span>Kết Thúc Cuộc Gọi</span>
-              </button>
-            </div>
-
-            {/* Synchronized Live Wound Inspection Canvas */}
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-xs font-bold text-oceanic uppercase tracking-wider flex items-center gap-1.5">
-                  <Layers className="h-3.5 w-3.5 text-sapphire" />
-                  Đồng Bộ Khung Hình Đo Đạc Trực Tuyến
-                </span>
-                <span className="text-[11px] font-mono text-slate-500">
-                  Ảnh Chụp Ngày {latestSnapshot.dayIndex} ({latestSnapshot.totalAreaCm2} cm²)
-                </span>
+            {/* Doctor Self View */}
+            <div className="h-28 rounded-2xl bg-slate-900/80 p-3 flex items-center justify-between border border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-indigoContrast text-white text-xs font-bold flex items-center justify-center">
+                  BS
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-white">BS. CKI Trần Minh Đức</p>
+                  <span className="text-[10px] text-slate-400 font-mono">Bác sĩ chủ trì</span>
+                </div>
               </div>
-              <WoundCanvas
-                rybMetrics={latestSnapshot.rybMetrics}
-                calibration={latestSnapshot.calibration}
-                totalAreaCm2={latestSnapshot.totalAreaCm2}
-                whiScore={latestSnapshot.whiScore}
-                interactive={true}
-              />
+
+              <span className="text-[10px] font-mono text-emerald-400 font-bold px-2 py-0.5 rounded bg-emerald-950/60">
+                E2EE Kết nối tốt
+              </span>
             </div>
 
           </div>
 
-          {/* Right Column: AI Auto-Generated SOAP Note & Clinical Sign-off (5 Cols) */}
-          <div className="lg:col-span-5 flex flex-col justify-between rounded-xl border border-oceanic-100 bg-azure-mist/30 p-4 space-y-3">
-            <div>
-              <div className="flex items-center justify-between border-b border-oceanic-100 pb-2 mb-3">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-sapphire" />
-                  <h3 className="text-xs font-bold text-oceanic uppercase tracking-wide">
-                    Bệnh Án Điện Tử SOAP & Phê Duyệt AI
-                  </h3>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleRegenerateAiSummary}
-                  disabled={isAiGenerating}
-                  className="text-[10px] font-bold text-sapphire hover:underline flex items-center gap-1"
-                >
-                  <Sparkles className={`h-3 w-3 ${isAiGenerating ? 'animate-spin' : ''}`} />
-                  Tạo Lại Với AI
-                </button>
-              </div>
-
-              {/* SOAP Form Fields */}
-              <div className="space-y-3 text-xs">
-                {/* S */}
-                <div>
-                  <label className="block font-bold text-slate-800 mb-0.5">
-                    [S] Subjective — Triệu Chứng Cơ Năng:
-                  </label>
-                  <textarea
-                    rows={2}
-                    value={soapSubjective}
-                    onChange={(e) => setSoapSubjective(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 bg-white p-2 text-xs text-slate-800 focus:border-oceanic focus:outline-none"
-                  />
-                </div>
-
-                {/* O */}
-                <div>
-                  <label className="block font-bold text-slate-800 mb-0.5">
-                    [O] Objective — Đo Đạc Khách Quan (Từ AI Vision):
-                  </label>
-                  <div className="rounded-lg border border-slate-200 bg-white p-2 text-[11px] text-slate-700 leading-relaxed font-medium">
-                    {soapObjective}
-                  </div>
-                </div>
-
-                {/* A */}
-                <div>
-                  <label className="block font-bold text-slate-800 mb-0.5">
-                    [A] Assessment — Đánh Giá & Chẩn Đoán Của Bác Sĩ:
-                  </label>
-                  <textarea
-                    rows={2}
-                    value={soapAssessment}
-                    onChange={(e) => setSoapAssessment(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 bg-white p-2 text-xs text-slate-800 focus:border-oceanic focus:outline-none"
-                  />
-                </div>
-
-                {/* P */}
-                <div>
-                  <label className="block font-bold text-slate-800 mb-0.5">
-                    [P] Plan — Phác Đồ Kê Toa & Chăm Sóc Tại Nhà:
-                  </label>
-                  <textarea
-                    rows={3}
-                    value={soapPlan}
-                    onChange={(e) => setSoapPlan(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 bg-white p-2 text-xs text-slate-800 focus:border-oceanic focus:outline-none"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Doctor Sign and Approve Button */}
-            <div className="pt-3 border-t border-oceanic-100 space-y-2">
-              <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
-                <ShieldCheck className="h-4 w-4 text-emerald-600" />
-                <span>Ký số định danh chứng thư: <strong>BS-MD-2024-8842</strong></span>
-              </div>
-
+          {/* Right: Interactive Tabs (Canvas, SOAP, Chat) (6 Cols) */}
+          <div className="lg:col-span-6 flex flex-col bg-white overflow-hidden border-l border-slate-100">
+            
+            {/* Tabs Selector */}
+            <div className="flex items-center border-b border-slate-100 p-2 gap-2 bg-slate-50">
               <button
-                onClick={handleApproveAndSign}
-                disabled={isSigned}
-                className={`w-full flex items-center justify-center gap-2 rounded-xl py-3 text-xs font-bold text-white shadow-md transition-all ${
-                  isSigned
-                    ? "bg-emerald-600 hover:bg-emerald-700"
-                    : "bg-oceanic hover:bg-oceanic-800 shadow-oceanic/30"
+                onClick={() => setActiveTab("canvas")}
+                className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${
+                  activeTab === "canvas" ? "bg-white text-oceanic shadow-xs" : "text-slate-600 hover:text-oceanic"
                 }`}
               >
-                {isSigned ? (
-                  <>
-                    <CheckCircle2 className="h-4 w-4" />
-                    <span>Đã Ký Số & Gửi Cho Bệnh Nhân!</span>
-                  </>
-                ) : (
-                  <>
-                    <FileText className="h-4 w-4 text-azure-mist" />
-                    <span>Phê Duyệt SOAP & Gửi Phác Đồ Cho Bệnh Nhân</span>
-                  </>
-                )}
+                <span>Thị giác AI vết thương</span>
               </button>
+
+              <button
+                onClick={() => setActiveTab("soap")}
+                className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${
+                  activeTab === "soap" ? "bg-white text-oceanic shadow-xs" : "text-slate-600 hover:text-oceanic"
+                }`}
+              >
+                <span>Bệnh án SOAP & Ký số</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab("chat")}
+                className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${
+                  activeTab === "chat" ? "bg-white text-oceanic shadow-xs" : "text-slate-600 hover:text-oceanic"
+                }`}
+              >
+                <span>Tin nhắn ({chatMessages.length})</span>
+              </button>
+            </div>
+
+            {/* Tab Contents */}
+            <div className="flex-1 p-6 overflow-y-auto space-y-4">
+              
+              {/* Tab 1: Synchronized Canvas */}
+              {activeTab === "canvas" && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-oceanic font-heading">{wound.title}</span>
+                    <span className="font-mono text-slate-500">Mốc quét: Ngày {activeSnapshot.dayIndex}</span>
+                  </div>
+
+                  <WoundCanvas
+                    imageUrl={activeSnapshot.imageUrl}
+                    rybMetrics={activeSnapshot.rybMetrics}
+                    calibration={activeSnapshot.calibration}
+                    totalAreaCm2={activeSnapshot.totalAreaCm2}
+                    whiScore={activeSnapshot.whiScore}
+                    interactive={true}
+                  />
+                </div>
+              )}
+
+              {/* Tab 2: SOAP Editor & Electronic Signing */}
+              {activeTab === "soap" && (
+                <div className="space-y-4 text-xs">
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">
+                      Đánh giá của Bác sĩ (Assessment):
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={assessment}
+                      onChange={(e) => setAssessment(e.target.value)}
+                      className="w-full rounded-2xl border border-slate-300 bg-slate-50 p-3 text-xs text-slate-800 focus:border-oceanic focus:bg-white focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">
+                      Kế hoạch điều trị & Gạc chỉ định (Plan):
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={plan}
+                      onChange={(e) => setPlan(e.target.value)}
+                      className="w-full rounded-2xl border border-slate-300 bg-slate-50 p-3 text-xs text-slate-800 focus:border-oceanic focus:bg-white focus:outline-none"
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleApprove}
+                    className="w-full py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-xs font-bold text-white shadow-xs transition-all"
+                  >
+                    <span>{isSigned ? "Đã ký số thành công!" : "Ký số SOAP Note & gửi máy bệnh nhân"}</span>
+                  </button>
+                </div>
+              )}
+
+              {/* Tab 3: Direct Consultation Chat */}
+              {activeTab === "chat" && (
+                <div className="h-full flex flex-col justify-between space-y-4">
+                  <div className="space-y-3 overflow-y-auto max-h-[300px] p-2">
+                    {chatMessages.map((msg, idx) => (
+                      <div key={idx} className="p-3 rounded-2xl bg-slate-50 border border-slate-100 text-xs space-y-1">
+                        <div className="flex items-center justify-between text-slate-400 font-mono text-[10px]">
+                          <span className="font-bold text-oceanic">{msg.sender}</span>
+                          <span>{msg.time}</span>
+                        </div>
+                        <p className="text-slate-800">{msg.text}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <form onSubmit={handleSendMessage} className="flex gap-2">
+                    <input
+                      type="text"
+                      value={inputMessage}
+                      onChange={(e) => setInputMessage(e.target.value)}
+                      placeholder="Nhập tin nhắn..."
+                      className="flex-1 rounded-2xl border border-slate-300 px-4 py-2.5 text-xs text-slate-800 focus:border-oceanic focus:outline-none"
+                    />
+                    <button
+                      type="submit"
+                      className="px-5 py-2.5 rounded-2xl bg-oceanic text-xs font-bold text-white hover:bg-oceanic-800"
+                    >
+                      <span>Gửi</span>
+                    </button>
+                  </form>
+                </div>
+              )}
+
             </div>
 
           </div>

@@ -1,49 +1,23 @@
-# LANT — AUTONOMOUS EXECUTION LOG
+# LANT Master Execution Log
 
-## [2026-08-20 23:43:30] — System Initialization
-- **Action**: Created system truth repository (`LANT_PROJECT_MANIFEST.md`, `TASK_PROGRESSION.json`, `EXECUTION_LOG.md`).
-- **Active Task**: Task 1.1 — Scaffolding Next.js App Router, TypeScript, Tailwind Monochromatic Clinical Blue theme.
+## [2026-08-23 17:01] - Pure Typography & Refined Minimalism Overhaul Completed
 
-## [2026-08-20 23:45:00] — Schema, Types & Engine Architecture
-- **Action**: Built `src/types/medical-schema.ts` (Patient, WoundProfile, SnapshotLog, RYBMetrics, SurveyData, ClinicianReview, TelehealthSession).
-- **Action**: Implemented `src/lib/ai-vision-mock.ts` with exact mathematical formulas:
-  - Pixel-to-Physical Calibration ($Ratio = Known / Pixels, Area = Mask \times Ratio^2$)
-  - Tissue RYB Composition ($R + Y + B + P = 100\%$)
-  - Clamped Wound Health Index ($WHI = Clamp_{0}^{100}(R + 1.2P - 1.5Y - 3B)$)
-  - Emergency Alert Thresholds ($\%Black \ge 10\%$ OR $\%Yellow \ge 35\%$, $\Delta_{Prev} < -10\%$)
-  - EWMA / WUWHS Dressing Recommendation Engine.
-- **Action**: Implemented `src/lib/mock-storage.ts` with realistic seeded multi-snapshot patient cases.
-
-## [2026-08-20 23:48:00] — UI Components & Application Pages
-- **Components Built**:
-  - `src/components/navbar.tsx`: Clinical branding, patient switcher, emergency hotline, and streak tracker.
-  - `src/components/wound-canvas.tsx`: Interactive HTML5 Canvas with real-time multi-layer RYB toggles, ArUco bounding box, and WHI calculation.
-  - `src/components/intake-survey-modal.tsx`: Comprehensive survey with Wong-Baker pain scale, etiology, exudate, and comorbidities.
-  - `src/components/recovery-chart.tsx`: Multi-timeline Recharts with Area ($cm^2$), $\Delta_{Base}$ reduction, and WHI trajectory.
-  - `src/components/dressing-recommender.tsx`: Clinical decision support for primary/secondary dressings and 4-step hygiene protocols.
-  - `src/components/hazard-alert.tsx`: Emergency Red Flag modal with 115 hospital routing.
-  - `src/components/reminder-modal.tsx`: Push/SMS/Email daily reminder schedule and streak compliance tracker.
-  - `src/components/telehealth-call-modal.tsx`: Simulated WebRTC video call with synchronized wound canvas & AI SOAP note signing.
-- **Pages Built**:
-  - `/app/page.tsx`: Clinical landing gateway.
-  - `/app/scan/page.tsx`: Wound capture, ArUco calibration, perspective/lighting check, case presets & intake.
-  - `/app/dashboard/page.tsx`: Patient dashboard with hero canvas and analytical charts.
-  - `/app/archive/page.tsx`: Healed wounds archive with before-after comparisons.
-  - `/app/clinician/page.tsx`: Risk triage queue sorted by severity.
-  - `/app/clinician/[patientId]/page.tsx`: Remote case review, time-series scrubber & telehealth video consultation.
-
-## [2026-08-20 23:52:00] — Diagnostics & Self-Healing Loop
-- **Diagnostic Run**: `npm run build` executed.
-- **Issue Detected**: Property `pink` in `[patientId]/page.tsx` instead of `pinkPercent`.
-- **Self-Healing Patch**: Replaced property with `pinkPercent`.
-- **Verification**: Re-ran `npm run build` -> Exit code 0 (100% clean compilation).
-- **Dev Server**: Started `npm run dev` at `http://localhost:3000`.
-
-## [2026-08-21 00:10:00] — Browser Verification & Certification
-- **Verification**: Executed comprehensive browser subagent inspection covering all 5 phases:
-  - Validated Scan workspace ArUco detection HUD and intake survey submission.
-  - Validated Dashboard snapshot time scrubber, RYB toggles, and recovery curve.
-  - Validated Hazard alert modal and daily reminder schedule.
-  - Validated Clinician risk triage portal, SOAP note signing, and live simulated video consultation.
-  - Validated Archive resolution benchmarks.
-- **Status**: ALL 15 TASKS COMPLETED SUCCESSFULLY.
+### Actions Executed:
+1. **Sentence Case Normalization**:
+   - Converted all wound titles and disease names in `src/lib/mock-storage.ts` and `src/lib/ai-vision-mock.ts` to sentence case (e.g. `Loét bàn chân đái tháo đường (Wagner II)`, `Loét tì đè vùng cùng cụt (Giai đoạn III)`, etc.).
+   - Standardized all button and badge texts to capitalize only the first letter.
+2. **Global Background Wallpaper Synchronization**:
+   - Confirmed `public/medical-bg-pattern.jpg` is applied globally in `src/app/globals.css` with fixed attachment and transparent layouts (`src/app/patient/layout.tsx`, `src/app/doctor/layout.tsx`).
+3. **Wider Patient Header**:
+   - Expanded top patient profile header in `src/app/patient/dashboard/page.tsx` (`max-w-7xl`, `p-8 lg:p-10`) for maximum visual balance.
+4. **Complete Removal of All Icons & Blinking Dots**:
+   - Gỡ bỏ hoàn toàn Lucide icons và blinking animations (`animate-ping`, `animate-pulse`) khỏi tất cả components, navbar, canvas, dashboard, scan, archive, telehealth và auth.
+5. **Dressing Recommender Font & Sentence Casing**:
+   - In `src/components/dressing-recommender.tsx`: `Gạc tiếp xúc trực tiếp (Primary)` and `Gạc phụ & tần suất thay`, configured with `font-heading font-montserrat` and `font-sans font-poppins`.
+6. **Recovery Chart Typography Unification**:
+   - In `src/components/recovery-chart.tsx`: Configured SVG axes and tooltips to explicitly use `var(--font-poppins)`, `var(--font-montserrat)`, and `var(--font-mono)`.
+7. **Airy, Spacious Minimalist Layout**:
+   - Replaced heavy double borders (`border-2`) and heavy boxes with light, breathable panels (`border border-oceanic-100/70`, `bg-white/95`, `shadow-clinical`).
+8. **Verification**:
+   - `npm run build` completed successfully (Exit Code 0, 16/16 routes).
+   - Automated browser subagent completed interactive verification of all patient and doctor flows.

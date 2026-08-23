@@ -7,7 +7,8 @@ import {
   ReminderConfig, 
   RYBMetrics, 
   CalibrationData, 
-  SurveyData 
+  SurveyData,
+  UserAccount
 } from "@/types/medical-schema";
 import { calculateWHI, evaluateHazardStatus, generateDressingRecommendation } from "./ai-vision-mock";
 
@@ -15,6 +16,28 @@ const STORAGE_KEY_PATIENTS = "LANT_STORAGE_PATIENTS_V1";
 const STORAGE_KEY_REVIEWS = "LANT_STORAGE_REVIEWS_V1";
 const STORAGE_KEY_TELEHEALTH = "LANT_STORAGE_TELEHEALTH_V1";
 const STORAGE_KEY_REMINDERS = "LANT_STORAGE_REMINDERS_V1";
+
+// Pre-seeded User Accounts
+export const SEED_USERS: UserAccount[] = [
+  {
+    id: "USR-PAT-01",
+    email: "an.nguyen62@gmail.com",
+    fullName: "Nguyễn Văn An",
+    role: "PATIENT",
+    phone: "0918 234 567",
+    medicalRecordNumber: "MRN-2024-8841",
+    patientId: "PAT-10842"
+  },
+  {
+    id: "USR-DOC-01",
+    email: "dr.duc@hospital.med.vn",
+    fullName: "BS. CKI Trần Minh Đức",
+    role: "CLINICIAN",
+    phone: "0908 765 432",
+    licenseNumber: "CCHN-2021-8842",
+    specialty: "Chuyên khoa Chăm sóc Vết thương & Phẫu thuật Chấn thương"
+  }
+];
 
 // Helper to generate seed snapshots
 function createSeedSnapshot(params: {
@@ -81,7 +104,7 @@ function createSeedSnapshot(params: {
   };
 }
 
-// Initial Realistic Seed Patients
+// Initial Realistic Seed Patients with Sentence Case Titles
 export const SEED_PATIENTS: Patient[] = [
   {
     id: "PAT-10842",
@@ -98,7 +121,7 @@ export const SEED_PATIENTS: Patient[] = [
       {
         id: "WND-849201",
         patientId: "PAT-10842",
-        title: "Loét Bàn Chân Đái Tháo Đường (Wagner II)",
+        title: "Loét bàn chân đái tháo đường (Wagner II)",
         anatomicalLocation: "Gót chân trái (Left Plantar Heel)",
         status: "active",
         createdAt: "2026-08-01T08:30:00Z",
@@ -202,7 +225,7 @@ export const SEED_PATIENTS: Patient[] = [
       {
         id: "WND-991204",
         patientId: "PAT-20931",
-        title: "Loét Tì Đè Vùng Cùng Cụt (Giai đoạn III)",
+        title: "Loét tì đè vùng cùng cụt (Giai đoạn III)",
         anatomicalLocation: "Vùng xương cùng (Sacrum)",
         status: "critical_triage",
         createdAt: "2026-08-10T10:00:00Z",
@@ -268,7 +291,7 @@ export const SEED_PATIENTS: Patient[] = [
       {
         id: "WND-551028",
         patientId: "PAT-30419",
-        title: "Vết Mổ Hở Thành Bụng Sau Cắt Ruột Thừa Viêm",
+        title: "Vết mổ hở thành bụng sau cắt ruột thừa viêm",
         anatomicalLocation: "Hố chậu phải (Right Iliac Fossa)",
         status: "active",
         createdAt: "2026-08-05T07:00:00Z",
@@ -319,7 +342,7 @@ export const SEED_PATIENTS: Patient[] = [
       {
         id: "WND-110294",
         patientId: "PAT-30419",
-        title: "Bỏng Nước Sôi Cẳng Tay Phải (Đã Liền Hoàn Toàn)",
+        title: "Bỏng nước sôi cẳng tay phải (Đã liền hoàn toàn)",
         anatomicalLocation: "Cẳng tay phải (Right Forearm)",
         status: "healed",
         createdAt: "2026-06-10T14:00:00Z",
@@ -373,139 +396,110 @@ export const SEED_PATIENTS: Patient[] = [
 
 export const SEED_TELEHEALTH: TelehealthSession[] = [
   {
-    id: "TEL-9001",
-    patientId: "PAT-10842",
-    patientName: "Nguyễn Văn An",
-    woundId: "WND-849201",
-    woundTitle: "Loét Bàn Chân Đái Tháo Đường (Wagner II)",
-    scheduledTime: "2026-08-21T09:30:00Z",
-    status: "scheduled",
-    doctorName: "BS. CKI Trần Minh Đức",
-    doctorSpecialty: "Chuyên khoa Chăm sóc Vết thương & Phẫu thuật Chấn thương",
-    clinicalSummary: "Lịch hẹn tái khám định kỳ theo dõi tiến trình giảm kích thước diện tích loét và điều chỉnh liều gạc Hydrocellular Foam."
-  },
-  {
-    id: "TEL-9002",
+    id: "TEL-001",
     patientId: "PAT-20931",
     patientName: "Trần Thị Mai",
     woundId: "WND-991204",
-    woundTitle: "Loét Tì Đè Vùng Cùng Cụt (Giai đoạn III)",
-    scheduledTime: "2026-08-21T11:00:00Z",
+    doctorName: "BS. CKI Trần Minh Đức",
+    doctorSpecialty: "Chuyên khoa Chăm sóc Vết thương & Phẫu thuật Chấn thương",
+    scheduledTime: "2026-08-24T09:00:00Z",
     status: "scheduled",
-    doctorName: "BS. CKI Lê Hoàng Hà",
-    doctorSpecialty: "Khoa Phẫu thuật Bỏng & Tạo hình",
-    clinicalSummary: "Hội chẩn khẩn cấp xử trí mô hoại tử đen 28% và nguy cơ nhiễm trùng lan rộng vùng cùng cụt."
+    woundTitle: "Loét tì đè vùng cùng cụt (Giai đoạn III)",
+    clinicalSummary: "Bệnh nhân có mảng hoại tử đen 28%, cần chỉ định cắt lọc khẩn cấp và chuyển viện tuyến trên."
+  },
+  {
+    id: "TEL-002",
+    patientId: "PAT-10842",
+    patientName: "Nguyễn Văn An",
+    woundId: "WND-849201",
+    doctorName: "BS. CKI Trần Minh Đức",
+    doctorSpecialty: "Chuyên khoa Chăm sóc Vết thương & Phẫu thuật Chấn thương",
+    scheduledTime: "2026-08-24T14:30:00Z",
+    status: "scheduled",
+    woundTitle: "Loét bàn chân đái tháo đường (Wagner II)",
+    clinicalSummary: "Tái khám định kỳ sau 17 ngày điều trị, đánh giá tiến độ biểu mô hóa và thay đổi phác đồ băng gạc xốp."
   }
 ];
 
 export const SEED_REVIEWS: ClinicianReview[] = [
   {
-    id: "REV-849201-01",
+    id: "REV-001",
     patientId: "PAT-10842",
     woundId: "WND-849201",
     snapshotId: "SNP-849201-04",
     clinicianName: "BS. CKI Trần Minh Đức",
-    clinicianTitle: "Bác sĩ Chăm sóc Vết thương & Nội tiết",
-    date: "2026-08-18T14:30:00Z",
-    soapSubjective: "Bệnh nhân báo giảm đau rõ rệt (VAS 3/10), không sốt, không rỉ dịch ướt giày.",
-    soapObjective: "Diện tích giảm từ 12.8 cm² xuống 8.45 cm² (Delta -34.0%). Nền mô hạt đỏ chiếm 62%, biểu mô hóa viền mép 18%, sạch hoàn toàn mô hoại tử đen.",
-    soapAssessment: "Loét bàn chân ĐTĐ đáp ứng rất tốt với phác đồ kiểm soát đường huyết và đệm xốp Allevyn.",
-    soapPlan: "Tiếp tục duy trì băng Foam chống dính, thay băng mỗi 3 ngày. Giữ chân khô ráo, mang dép chỉnh hình giảm tải áp lực. Tái khám sau 7 ngày.",
+    clinicianTitle: "Bác sĩ Chăm sóc Vết thương & Ngoại Chấn Thương",
+    date: "2026-08-18T10:00:00Z",
+    soapSubjective: "Bệnh nhân đỡ đau nhiều (VAS 3/10), không sốt, không rỉ dịch bẩn.",
+    soapObjective: "Mô hạt đỏ chiếm 62%, biểu mô hóa rìa 18%, không còn vảy đen. Diện tích giảm còn 8.45 cm² (giảm 34% so với ban đầu). Điểm WHI đạt 56/100.",
+    soapAssessment: "Loét bàn chân đái tháo đường đáp ứng tốt với phác đồ kiểm soát ẩm, không có dấu hiệu nhiễm trùng mới.",
+    soapPlan: "Chuyển sang băng dán bọt xốp Polyurethane (Allevyn Gentle Border). Thay băng mỗi 3 ngày. Tiếp tục kiểm soát đường huyết chặt chẽ.",
     approved: true,
-    signedAt: "2026-08-18T14:35:00Z"
+    signedAt: "2026-08-18T10:05:00Z"
   }
 ];
 
-// Persistent LocalStorage Client Layer
-export class MockStorageService {
-  private static isBrowser(): boolean {
-    return typeof window !== "undefined";
-  }
-
-  public static getPatients(): Patient[] {
-    if (!this.isBrowser()) return SEED_PATIENTS;
+// LocalStorage Mock Service with clear-cache resilience
+export const MockStorageService = {
+  getPatients(): Patient[] {
+    if (typeof window === "undefined") return SEED_PATIENTS;
     try {
-      const data = localStorage.getItem(STORAGE_KEY_PATIENTS);
-      if (!data) {
+      const stored = localStorage.getItem(STORAGE_KEY_PATIENTS);
+      if (!stored) {
         localStorage.setItem(STORAGE_KEY_PATIENTS, JSON.stringify(SEED_PATIENTS));
         return SEED_PATIENTS;
       }
-      return JSON.parse(data);
+      return JSON.parse(stored);
     } catch {
       return SEED_PATIENTS;
     }
-  }
+  },
 
-  public static savePatients(patients: Patient[]): void {
-    if (!this.isBrowser()) return;
-    try {
-      localStorage.setItem(STORAGE_KEY_PATIENTS, JSON.stringify(patients));
-    } catch (e) {
-      console.error("Storage error:", e);
-    }
-  }
-
-  public static getPatient(id: string): Patient | undefined {
+  getPatient(id: string): Patient | undefined {
     const patients = this.getPatients();
     return patients.find(p => p.id === id);
-  }
+  },
 
-  public static getWound(woundId: string): { wound: WoundProfile; patient: Patient } | null {
-    const patients = this.getPatients();
-    for (const patient of patients) {
-      const wound = patient.wounds.find(w => w.id === woundId);
-      if (wound) return { wound, patient };
-    }
-    return null;
-  }
+  savePatients(patients: Patient[]) {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(STORAGE_KEY_PATIENTS, JSON.stringify(patients));
+  },
 
-  public static addSnapshot(woundId: string, snapshot: SnapshotLog): boolean {
-    const patients = this.getPatients();
-    let updated = false;
-
-    for (const patient of patients) {
-      const wound = patient.wounds.find(w => w.id === woundId);
-      if (wound) {
-        wound.snapshots.push(snapshot);
-        wound.currentAreaCm2 = snapshot.totalAreaCm2;
-        wound.currentWHI = snapshot.whiScore;
-        wound.updatedAt = new Date().toISOString();
-
-        if (snapshot.whiScore >= 95 || snapshot.totalAreaCm2 <= 0.1) {
-          wound.status = "healed";
-        } else if (snapshot.hazardStatus === "emergency_critical") {
-          wound.status = "critical_triage";
-          patient.riskTier = "high_critical";
-        }
-
-        updated = true;
-        break;
-      }
-    }
-
-    if (updated) {
-      this.savePatients(patients);
-    }
-    return updated;
-  }
-
-  public static createNewWound(
-    patientId: string, 
-    woundData: { title: string; anatomicalLocation: string }, 
-    initialSnapshot: SnapshotLog
-  ): WoundProfile | null {
+  addSnapshot(patientId: string, woundId: string, snapshot: SnapshotLog) {
     const patients = this.getPatients();
     const patient = patients.find(p => p.id === patientId);
-    if (!patient) return null;
+    if (!patient) return;
+
+    const wound = patient.wounds.find(w => w.id === woundId);
+    if (!wound) return;
+
+    wound.snapshots.push(snapshot);
+    wound.currentAreaCm2 = snapshot.totalAreaCm2;
+    wound.currentWHI = snapshot.whiScore;
+    wound.updatedAt = snapshot.timestamp;
+
+    if (snapshot.totalAreaCm2 <= 0.1) {
+      wound.status = "healed";
+    } else if (snapshot.hazardStatus === "emergency_critical") {
+      wound.status = "critical_triage";
+    }
+
+    this.savePatients(patients);
+  },
+
+  createNewWound(patientId: string, woundData: { title: string; anatomicalLocation: string }, initialSnapshot: SnapshotLog) {
+    const patients = this.getPatients();
+    const patient = patients.find(p => p.id === patientId);
+    if (!patient) return;
 
     const newWound: WoundProfile = {
       id: initialSnapshot.woundId,
-      patientId: patient.id,
+      patientId,
       title: woundData.title,
       anatomicalLocation: woundData.anatomicalLocation,
       status: initialSnapshot.hazardStatus === "emergency_critical" ? "critical_triage" : "active",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: initialSnapshot.timestamp,
+      updatedAt: initialSnapshot.timestamp,
       baselineAreaCm2: initialSnapshot.totalAreaCm2,
       currentAreaCm2: initialSnapshot.totalAreaCm2,
       currentWHI: initialSnapshot.whiScore,
@@ -514,97 +508,71 @@ export class MockStorageService {
 
     patient.wounds.unshift(newWound);
     this.savePatients(patients);
-    return newWound;
-  }
+  },
 
-  public static archiveWound(woundId: string): boolean {
-    const patients = this.getPatients();
-    let updated = false;
-    for (const patient of patients) {
-      const wound = patient.wounds.find(w => w.id === woundId);
-      if (wound) {
-        wound.status = "healed";
-        wound.updatedAt = new Date().toISOString();
-        updated = true;
-        break;
-      }
-    }
-    if (updated) this.savePatients(patients);
-    return updated;
-  }
-
-  public static getReviews(woundId?: string): ClinicianReview[] {
-    if (!this.isBrowser()) return SEED_REVIEWS;
+  getReviews(woundId: string): ClinicianReview[] {
+    if (typeof window === "undefined") return SEED_REVIEWS.filter(r => r.woundId === woundId);
     try {
-      const data = localStorage.getItem(STORAGE_KEY_REVIEWS);
-      const reviews: ClinicianReview[] = data ? JSON.parse(data) : SEED_REVIEWS;
-      if (!data) localStorage.setItem(STORAGE_KEY_REVIEWS, JSON.stringify(SEED_REVIEWS));
-      return woundId ? reviews.filter(r => r.woundId === woundId) : reviews;
+      const stored = localStorage.getItem(STORAGE_KEY_REVIEWS);
+      const reviews: ClinicianReview[] = stored ? JSON.parse(stored) : SEED_REVIEWS;
+      return reviews.filter(r => r.woundId === woundId);
     } catch {
-      return SEED_REVIEWS;
+      return SEED_REVIEWS.filter(r => r.woundId === woundId);
     }
-  }
+  },
 
-  public static addReview(review: ClinicianReview): void {
-    if (!this.isBrowser()) return;
-    const reviews = this.getReviews();
-    reviews.unshift(review);
-    localStorage.setItem(STORAGE_KEY_REVIEWS, JSON.stringify(reviews));
-  }
-
-  public static getTelehealthSessions(): TelehealthSession[] {
-    if (!this.isBrowser()) return SEED_TELEHEALTH;
+  addReview(review: ClinicianReview) {
+    if (typeof window === "undefined") return;
     try {
-      const data = localStorage.getItem(STORAGE_KEY_TELEHEALTH);
-      if (!data) {
+      const stored = localStorage.getItem(STORAGE_KEY_REVIEWS);
+      const reviews: ClinicianReview[] = stored ? JSON.parse(stored) : [...SEED_REVIEWS];
+      reviews.unshift(review);
+      localStorage.setItem(STORAGE_KEY_REVIEWS, JSON.stringify(reviews));
+    } catch (e) {
+      console.error(e);
+    }
+  },
+
+  getTelehealthSessions(): TelehealthSession[] {
+    if (typeof window === "undefined") return SEED_TELEHEALTH;
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY_TELEHEALTH);
+      if (!stored) {
         localStorage.setItem(STORAGE_KEY_TELEHEALTH, JSON.stringify(SEED_TELEHEALTH));
         return SEED_TELEHEALTH;
       }
-      return JSON.parse(data);
+      return JSON.parse(stored);
     } catch {
       return SEED_TELEHEALTH;
     }
-  }
+  },
 
-  public static addTelehealthSession(session: TelehealthSession): void {
-    if (!this.isBrowser()) return;
-    const sessions = this.getTelehealthSessions();
-    sessions.unshift(session);
-    localStorage.setItem(STORAGE_KEY_TELEHEALTH, JSON.stringify(sessions));
-  }
-
-  public static getReminderConfig(patientId: string): ReminderConfig {
-    if (!this.isBrowser()) {
-      return {
-        patientId,
-        enabled: true,
-        timeOfDay: "09:00",
-        frequency: "daily",
-        channels: { sms: true, email: true, push: true },
-        streakDays: 5,
-        lastCaptureDate: "2026-08-18"
-      };
-    }
-    try {
-      const data = localStorage.getItem(`${STORAGE_KEY_REMINDERS}_${patientId}`);
-      if (data) return JSON.parse(data);
-    } catch {}
-
-    const defaultConfig: ReminderConfig = {
+  getReminders(patientId: string): ReminderConfig {
+    const defaultReminder: ReminderConfig = {
       patientId,
-      enabled: true,
-      timeOfDay: "09:00",
       frequency: "daily",
-      channels: { sms: true, email: true, push: true },
+      timeOfDay: "09:00",
+      enabled: true,
+      channels: {
+        sms: true,
+        email: true,
+        push: true
+      },
       streakDays: 5,
       lastCaptureDate: "2026-08-18"
     };
-    localStorage.setItem(`${STORAGE_KEY_REMINDERS}_${patientId}`, JSON.stringify(defaultConfig));
-    return defaultConfig;
-  }
 
-  public static saveReminderConfig(config: ReminderConfig): void {
-    if (!this.isBrowser()) return;
+    if (typeof window === "undefined") return defaultReminder;
+    try {
+      const stored = localStorage.getItem(`${STORAGE_KEY_REMINDERS}_${patientId}`);
+      return stored ? JSON.parse(stored) : defaultReminder;
+    } catch {
+      return defaultReminder;
+    }
+  },
+
+  saveReminders(config: ReminderConfig) {
+    if (typeof window === "undefined") return;
     localStorage.setItem(`${STORAGE_KEY_REMINDERS}_${config.patientId}`, JSON.stringify(config));
   }
-}
+};

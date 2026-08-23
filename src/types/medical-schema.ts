@@ -3,6 +3,21 @@
  * Single Source of Truth for Project LANT
  */
 
+export type UserRole = 'PATIENT' | 'CLINICIAN';
+
+export interface UserAccount {
+  id: string;
+  email: string;
+  fullName: string;
+  role: UserRole;
+  phone?: string;
+  avatarUrl?: string;
+  medicalRecordNumber?: string; // For patients
+  licenseNumber?: string;       // For clinicians
+  specialty?: string;           // For clinicians
+  patientId?: string;           // Linked patient ID
+}
+
 export type TissueType = 'granulation' | 'slough' | 'necrotic' | 'epithelial';
 
 export interface RYBMetrics {

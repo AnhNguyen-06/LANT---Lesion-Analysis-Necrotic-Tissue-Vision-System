@@ -74,19 +74,19 @@ const config: Config = {
         }
       },
       fontFamily: {
-        sans: ["var(--font-inter)", "ui-sans-serif", "system-ui", "sans-serif"],
-        mono: ["var(--font-jetbrains-mono)", "ui-monospace", "monospace"],
+        sans: ["var(--font-poppins)", "system-ui", "sans-serif"],
+        poppins: ["var(--font-poppins)", "sans-serif"],
+        heading: ["var(--font-montserrat)", "sans-serif"],
+        montserrat: ["var(--font-montserrat)", "sans-serif"],
+        playfair: ["var(--font-playfair)", "Georgia", "serif"],
+        serif: ["var(--font-playfair)", "Georgia", "serif"],
+        mono: ["var(--font-mono)", "JetBrains Mono", "monospace"],
       },
       boxShadow: {
         'clinical': '0 4px 20px -2px rgba(0, 43, 140, 0.08), 0 2px 6px -1px rgba(0, 43, 140, 0.04)',
         'clinical-lg': '0 10px 30px -4px rgba(0, 43, 140, 0.12), 0 4px 12px -2px rgba(0, 43, 140, 0.06)',
         'glow-sapphire': '0 0 20px rgba(15, 82, 186, 0.25)',
         'hazard': '0 0 25px rgba(220, 38, 38, 0.3)',
-      },
-      backgroundImage: {
-        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-        'clinical-gradient': 'linear-gradient(135deg, #002B8C 0%, #0F52BA 50%, #282888 100%)',
-        'azure-surface': 'linear-gradient(180deg, #F0FFFF 0%, #FFFFFF 100%)',
       }
     },
   },
