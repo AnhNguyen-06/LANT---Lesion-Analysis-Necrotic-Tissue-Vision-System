@@ -1,23 +1,44 @@
 # LANT Master Execution Log
 
-## [2026-08-23 17:01] - Pure Typography & Refined Minimalism Overhaul Completed
+## [2026-09-01 23:49] - Enterprise Medical Fullstack & Autonomous Refactoring Completed
 
-### Actions Executed:
-1. **Sentence Case Normalization**:
-   - Converted all wound titles and disease names in `src/lib/mock-storage.ts` and `src/lib/ai-vision-mock.ts` to sentence case (e.g. `Loét bàn chân đái tháo đường (Wagner II)`, `Loét tì đè vùng cùng cụt (Giai đoạn III)`, etc.).
-   - Standardized all button and badge texts to capitalize only the first letter.
-2. **Global Background Wallpaper Synchronization**:
-   - Confirmed `public/medical-bg-pattern.jpg` is applied globally in `src/app/globals.css` with fixed attachment and transparent layouts (`src/app/patient/layout.tsx`, `src/app/doctor/layout.tsx`).
-3. **Wider Patient Header**:
-   - Expanded top patient profile header in `src/app/patient/dashboard/page.tsx` (`max-w-7xl`, `p-8 lg:p-10`) for maximum visual balance.
-4. **Complete Removal of All Icons & Blinking Dots**:
-   - Gỡ bỏ hoàn toàn Lucide icons và blinking animations (`animate-ping`, `animate-pulse`) khỏi tất cả components, navbar, canvas, dashboard, scan, archive, telehealth và auth.
-5. **Dressing Recommender Font & Sentence Casing**:
-   - In `src/components/dressing-recommender.tsx`: `Gạc tiếp xúc trực tiếp (Primary)` and `Gạc phụ & tần suất thay`, configured with `font-heading font-montserrat` and `font-sans font-poppins`.
-6. **Recovery Chart Typography Unification**:
-   - In `src/components/recovery-chart.tsx`: Configured SVG axes and tooltips to explicitly use `var(--font-poppins)`, `var(--font-montserrat)`, and `var(--font-mono)`.
-7. **Airy, Spacious Minimalist Layout**:
-   - Replaced heavy double borders (`border-2`) and heavy boxes with light, breathable panels (`border border-oceanic-100/70`, `bg-white/95`, `shadow-clinical`).
-8. **Verification**:
-   - `npm run build` completed successfully (Exit Code 0, 16/16 routes).
-   - Automated browser subagent completed interactive verification of all patient and doctor flows.
+### 8 Core Upgrades Executed & Verified:
+
+1. **Multi-Tenant Local DB Engine (`/src/lib/db-store.ts` & `/src/context/AuthContext.tsx`)**:
+   - Implemented relational entities for `users`, `patients`, `wounds`, `snapshots`, `appointments`, `messages`, `signed_soap_records`, and `call_signals`.
+   - Seeded demo profiles: `patient.an@lant.med`, `patient.mai@lant.med`, `patient.long@lant.med`, `doctor.duc@lant.med`, `doctor.huong@lant.med`.
+   - New user registrations get completely isolated sandboxes.
+
+2. **User Profile Management & Vietnam Geo-Address Cascading Selector (`/src/lib/vietnam-address-data.ts`, `/patient/profile`, `/doctor/profile`)**:
+   - Live avatar webcam photo capture and file upload.
+   - Cascading 63 Provinces $\to$ Districts $\to$ Wards selector.
+   - Medical history textarea and CCHN license number fields.
+   - Floating update action bar with toast notifications.
+
+3. **Camera Stream Fix & Real-Time Luminance Quality Analyzer (`/patient/scan/page.tsx`)**:
+   - 200ms frame sampling canvas calculating perceived luminance:
+     $$\text{Luminance} = \frac{0.299R + 0.587G + 0.114B}{255} \times 100\%$$
+   - Live floating lighting badges: `<30%` (🔴 Ánh sáng quá tối), `>85%` (🟡 Ánh sáng chói lóa), `30-85%` (🟢 Ánh sáng tối ưu).
+   - High-res frame capture to DataURL and seamless transition to analysis.
+
+4. **Asymmetric Telehealth Calling & Appointment System (`/src/components/incoming-call-modal.tsx`, `/src/components/telehealth-call-modal.tsx`)**:
+   - Patients cannot call doctors directly (only request appointments).
+   - Doctors initiate video calls $\to$ dispatches signal $\to$ triggers real-time incoming call modal with Accept / Decline on patient screens.
+   - Split-screen WebRTC room with live wound mask viewer and clinical notes.
+
+5. **Isolated Two-Way 1-on-1 Real-Time Messaging Engine (`/src/components/chat-room.tsx`)**:
+   - Thread isolation strictly by `chat_{doctorId}_{patientId}`.
+   - Real-time updates via window events, unread count tracking, image attachment support.
+
+6. **Certified Digital SOAP Note Signing & Patient EMR Sync (`/doctor/patient/[id]`, `/patient/dashboard`)**:
+   - Doctor approves & digitally signs with cryptographic certificate stamp `LANT-CERT-2026-XXXX`.
+   - Instantly persists in DB and renders on patient dashboard with Print / Download PDF capability.
+
+7. **Interactive 7-Step Onboarding Walkthrough Tour (`/src/components/onboarding-tour.tsx`)**:
+   - 7-step guided spotlight tour for Patients and 3-step tour for Doctors.
+   - Auto-opens on first login after registration with "Xem lại hướng dẫn" trigger.
+
+8. **Doctor Dashboard Polish, Dedicated Clinician Layout & Build Verification**:
+   - Triage queue filtering by necrosis/infection risk.
+   - Today's appointments with direct Telehealth calling.
+   - Next.js build compilation passed with 18/18 routes generated cleanly (Exit Code 0).

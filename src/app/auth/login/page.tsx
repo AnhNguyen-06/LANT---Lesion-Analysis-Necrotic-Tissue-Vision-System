@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth, RoleType } from "@/context/AuthContext";
+import { SEED_USERS_DB } from "@/lib/db-store";
 
 function LoginForm() {
   const router = useRouter();
@@ -17,6 +18,7 @@ function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
     const r = searchParams.get("role")?.toLowerCase();
@@ -25,28 +27,28 @@ function LoginForm() {
     }
   }, [searchParams]);
 
-  const handleQuickDemoFill = (selectedRole: RoleType) => {
-    setRole(selectedRole);
-    if (selectedRole === "patient") {
-      setEmail("an.nguyen62@gmail.com");
-      setPassword("patient123");
-    } else {
-      setEmail("dr.duc@hospital.med.vn");
-      setPassword("doctor123");
-    }
+  const handleSelectDemoUser = (userEmail: string, pass: string) => {
+    setEmail(userEmail);
+    setPassword(pass);
+    setErrorMessage("");
   };
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setErrorMessage("");
 
     setTimeout(() => {
-      login(email, role);
+      const success = login(email, role, password);
+      if (!success) {
+        setErrorMessage("Email hoặc vai trò không khớp. Vui lòng kiểm tra lại.");
+      }
       setIsLoading(false);
     }, 400);
   };
 
   const isPatient = role === "patient";
+  const demoUsers = SEED_USERS_DB.filter(u => isPatient ? u.role === "PATIENT" : u.role === "CLINICIAN");
 
   return (
     <div className="min-h-screen flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans">
@@ -74,7 +76,12 @@ function LoginForm() {
           <div className="grid grid-cols-2 gap-2 p-1.5 bg-slate-100 rounded-2xl border border-slate-200/80">
             <button
               type="button"
-              onClick={() => setRole("patient")}
+              onClick={() => {
+                setRole("patient");
+                setEmail("");
+                setPassword("");
+                setErrorMessage("");
+              }}
               className={`py-2 px-3 rounded-xl text-xs font-bold transition-all ${
                 isPatient
                   ? "bg-oceanic text-white shadow-xs"
@@ -86,7 +93,12 @@ function LoginForm() {
 
             <button
               type="button"
-              onClick={() => setRole("doctor")}
+              onClick={() => {
+                setRole("doctor");
+                setEmail("");
+                setPassword("");
+                setErrorMessage("");
+              }}
               className={`py-2 px-3 rounded-xl text-xs font-bold transition-all ${
                 !isPatient
                   ? "bg-indigoContrast text-white shadow-xs"
@@ -97,19 +109,43 @@ function LoginForm() {
             </button>
           </div>
 
-          {/* Quick Demo Credentials Button */}
-          <div className="rounded-2xl bg-azure-mist/60 p-3.5 flex items-center justify-between border border-oceanic-100">
-            <div className="text-xs font-semibold text-oceanic-900 font-heading">
-              Tài khoản mẫu {isPatient ? "bệnh nhân" : "bác sĩ"}
+          {/* Quick Demo Credentials Picker */}
+          <div className="rounded-2xl bg-azure-mist/70 p-4 border border-oceanic-100 space-y-2">
+            <div className="text-xs font-bold text-oceanic-900 font-heading">
+              Chọn nhanh tài khoản mẫu:
             </div>
-            <button
-              type="button"
-              onClick={() => handleQuickDemoFill(role)}
-              className="text-[11px] font-bold text-sapphire bg-white px-3 py-1 rounded-lg border border-oceanic-200 hover:bg-oceanic-50 transition-colors shadow-2xs"
-            >
-              Điền tự động
-            </button>
+            <div className="flex flex-col gap-1.5">
+              {demoUsers.map((u) => (
+                <button
+                  key={u.id}
+                  type="button"
+                  onClick={() => handleSelectDemoUser(u.email, u.passwordHash)}
+                  className={`text-left px-3 py-2 rounded-xl text-xs transition-all border ${
+                    email === u.email
+                      ? "bg-white border-oceanic text-oceanic font-bold shadow-2xs"
+                      : "bg-white/80 border-slate-200/80 text-slate-700 hover:bg-white hover:border-oceanic-200"
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold">{u.fullName}</span>
+                    <span className="text-[10px] font-mono text-dusk-500">{u.email}</span>
+                  </div>
+                  {u.medicalRecordNumber && (
+                    <div className="text-[10px] text-slate-500 font-mono mt-0.5">{u.medicalRecordNumber}</div>
+                  )}
+                  {u.specialty && (
+                    <div className="text-[10px] text-slate-500 truncate mt-0.5">{u.specialty}</div>
+                  )}
+                </button>
+              ))}
+            </div>
           </div>
+
+          {errorMessage && (
+            <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
+              {errorMessage}
+            </div>
+          )}
 
           {/* Login Form */}
           <form onSubmit={handleLogin} className="space-y-4">
@@ -122,7 +158,7 @@ function LoginForm() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder={isPatient ? "an.nguyen62@gmail.com" : "dr.duc@hospital.med.vn"}
+                placeholder={isPatient ? "patient.an@lant.med" : "doctor.duc@lant.med"}
                 className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-xs font-medium text-slate-800 focus:border-oceanic focus:outline-none"
               />
             </div>
@@ -144,37 +180,32 @@ function LoginForm() {
             <button
               type="submit"
               disabled={isLoading}
-              className={`w-full py-3.5 rounded-2xl text-xs font-bold text-white shadow-xs transition-all ${
+              className={`w-full py-3.5 px-4 rounded-2xl font-bold text-white text-xs tracking-wide transition-all shadow-md ${
                 isPatient
                   ? "bg-oceanic hover:bg-oceanic-800"
-                  : "bg-indigoContrast hover:bg-indigoContrast-900"
-              }`}
+                  : "bg-indigoContrast hover:bg-indigo-950"
+              } ${isLoading ? "opacity-75 cursor-not-allowed" : ""}`}
             >
-              {isLoading ? (
-                <span>Đang xác thực...</span>
-              ) : (
-                <span>Vào không gian {isPatient ? "bệnh nhân" : "bác sĩ"} →</span>
-              )}
+              <span>{isLoading ? "Đang xác thực..." : `Đăng nhập ${isPatient ? "bệnh nhân" : "bác sĩ"}`}</span>
             </button>
           </form>
 
-          {/* Return to Role Gateway */}
-          <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-            <Link
-              href="/"
-              className="text-slate-500 hover:text-oceanic transition-colors"
-            >
-              <span>← Đổi vai trò</span>
-            </Link>
-
+          {/* Register Link */}
+          <div className="pt-2 text-center text-xs text-slate-600">
+            <span>Chưa có tài khoản y tế? </span>
             <Link
               href={`/auth/register?role=${role}`}
               className="font-bold text-sapphire hover:underline"
             >
-              Đăng ký tài khoản mới
+              Đăng ký hồ sơ mới
             </Link>
           </div>
 
+          <div className="text-center pt-1">
+            <Link href="/" className="text-[11px] text-dusk-500 hover:text-oceanic font-medium">
+              ← Quay lại cổng chọn vai trò
+            </Link>
+          </div>
         </div>
       </div>
     </div>
@@ -183,7 +214,7 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-xs">Đang tải trang đăng nhập...</div>}>
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-xs text-slate-500 font-mono">Đang tải biểu mẫu...</div>}>
       <LoginForm />
     </Suspense>
   );

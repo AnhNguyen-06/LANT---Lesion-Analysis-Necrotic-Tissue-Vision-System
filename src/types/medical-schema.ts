@@ -1,9 +1,16 @@
 /**
  * LANT — Medical Schema & Clinical Type Definitions
- * Single Source of Truth for Project LANT
+ * Single Source of Truth for Enterprise Project LANT
  */
 
 export type UserRole = 'PATIENT' | 'CLINICIAN';
+
+export interface VietnamAddress {
+  street: string;
+  ward: string;
+  district: string;
+  province: string;
+}
 
 export interface UserAccount {
   id: string;
@@ -11,11 +18,18 @@ export interface UserAccount {
   fullName: string;
   role: UserRole;
   phone?: string;
+  dob?: string;
+  gender?: 'Nam' | 'Nữ' | 'Khác';
   avatarUrl?: string;
-  medicalRecordNumber?: string; // For patients
-  licenseNumber?: string;       // For clinicians
+  address?: VietnamAddress;
+  medicalHistory?: string;
+  medicalRecordNumber?: string; // For patients (MRN-XXXX-XXXX)
+  licenseNumber?: string;       // For clinicians (CCHN-XXXX-XXXX)
   specialty?: string;           // For clinicians
-  patientId?: string;           // Linked patient ID
+  patientId?: string;           // Linked patient record ID
+  assignedDoctorId?: string;    // Assigned primary clinician
+  tourCompleted?: boolean;      // Onboarding tour completed flag
+  createdAt?: string;
 }
 
 export type TissueType = 'granulation' | 'slough' | 'necrotic' | 'epithelial';
@@ -83,6 +97,7 @@ export interface SnapshotLog {
   timestamp: string;
   dayIndex: number;
   imageUrl: string;
+  maskOverlayUrl?: string;
   calibration: CalibrationData;
   totalAreaCm2: number;
   estimatedVolumeCm3?: number;
@@ -119,14 +134,19 @@ export interface Patient {
   id: string; // PAT-XXXXX
   fullName: string;
   age: number;
-  gender: 'Male' | 'Female' | 'Other';
+  dob?: string;
+  gender: 'Male' | 'Female' | 'Other' | 'Nam' | 'Nữ' | 'Khác';
   phone: string;
   email: string;
+  avatarUrl?: string;
+  address?: VietnamAddress;
   medicalRecordNumber: string;
   riskTier: PatientRiskTier;
   wounds: WoundProfile[];
   allergies?: string[];
+  medicalHistory?: string;
   primaryPhysician?: string;
+  assignedDoctorId?: string;
 }
 
 export interface ClinicianReview {
@@ -143,6 +163,8 @@ export interface ClinicianReview {
   soapPlan: string;
   approved: boolean;
   signedAt?: string;
+  certificateId?: string;
+  licenseNumber?: string;
 }
 
 export interface TelehealthSession {
@@ -152,11 +174,13 @@ export interface TelehealthSession {
   woundId: string;
   woundTitle: string;
   scheduledTime: string;
-  status: 'scheduled' | 'in_progress' | 'completed';
+  status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
   doctorName: string;
   doctorSpecialty: string;
+  doctorId?: string;
   clinicalSummary?: string;
   prescriptions?: string[];
+  notes?: string;
 }
 
 export interface ReminderConfig {
@@ -171,4 +195,27 @@ export interface ReminderConfig {
   };
   streakDays: number;
   lastCaptureDate?: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  threadId: string; // chat_{doctorId}_{patientId}
+  senderId: string;
+  senderName: string;
+  receiverId: string;
+  content: string;
+  attachmentUrl?: string;
+  timestamp: string;
+  isRead: boolean;
+}
+
+export interface IncomingCallSignal {
+  id: string;
+  callId: string;
+  doctorId: string;
+  doctorName: string;
+  patientId: string;
+  woundTitle: string;
+  status: 'calling' | 'accepted' | 'declined' | 'ended';
+  startedAt: string;
 }

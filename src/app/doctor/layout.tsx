@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { DoctorNavbar } from "@/components/doctor-navbar";
+import { OnboardingTour } from "@/components/onboarding-tour";
 
 export default function DoctorLayout({
   children,
@@ -17,7 +18,7 @@ export default function DoctorLayout({
     if (!isLoading) {
       if (!isAuthenticated) {
         router.push("/auth/login?role=doctor");
-      } else if (user?.role === "patient") {
+      } else if (user?.role === "PATIENT") {
         alert("Quyền truy cập bị từ chối: Tài khoản Bệnh nhân không thể truy cập Cổng Bác sĩ.");
         router.push("/patient/dashboard");
       }
@@ -30,6 +31,7 @@ export default function DoctorLayout({
       <div className="flex-1">
         {children}
       </div>
+      <OnboardingTour />
     </div>
   );
 }

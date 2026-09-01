@@ -9,6 +9,8 @@ interface IntakeSurveyModalProps {
   onSubmit: (survey: SurveyData, woundTitle: string, anatomicalLocation: string) => void;
   defaultTitle?: string;
   defaultLocation?: string;
+  initialTitle?: string;
+  initialLocation?: string;
   defaultEtiology?: WoundEtiology;
 }
 
@@ -16,12 +18,14 @@ export function IntakeSurveyModal({
   isOpen,
   onClose,
   onSubmit,
-  defaultTitle = "Vết thương mới quét",
-  defaultLocation = "Bàn chân trái (Left Plantar)",
+  defaultTitle,
+  defaultLocation,
+  initialTitle,
+  initialLocation,
   defaultEtiology = "diabetic_foot",
 }: IntakeSurveyModalProps) {
-  const [woundTitle, setWoundTitle] = useState(defaultTitle);
-  const [anatomicalLocation, setAnatomicalLocation] = useState(defaultLocation);
+  const [woundTitle, setWoundTitle] = useState(initialTitle || defaultTitle || "Vết thương mới quét");
+  const [anatomicalLocation, setAnatomicalLocation] = useState(initialLocation || defaultLocation || "Bàn chân trái (Left Plantar)");
   const [painScore, setPainScore] = useState(5);
   const [etiology, setEtiology] = useState<WoundEtiology>(defaultEtiology);
   const [durationWeeks, setDurationWeeks] = useState(3);

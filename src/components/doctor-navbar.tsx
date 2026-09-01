@@ -82,12 +82,30 @@ export function DoctorNavbar() {
                   </span>
                 </div>
 
+                <Link
+                  href="/doctor/profile"
+                  onClick={() => setIsUserMenuOpen(false)}
+                  className="w-full block px-3 py-2 text-xs font-bold text-indigoContrast hover:bg-indigo-50 rounded-xl transition-colors text-left"
+                >
+                  <span>Hồ sơ & Chứng chỉ CCHN</span>
+                </Link>
+
+                <button
+                  onClick={() => {
+                    setIsUserMenuOpen(false);
+                    window.dispatchEvent(new CustomEvent("LANT_TRIGGER_TOUR"));
+                  }}
+                  className="w-full px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 rounded-xl transition-colors text-left"
+                >
+                  <span>Xem lại hướng dẫn</span>
+                </button>
+
                 <button
                   onClick={() => {
                     setIsUserMenuOpen(false);
                     logout();
                   }}
-                  className="w-full px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-50 rounded-xl transition-colors text-left"
+                  className="w-full px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-50 rounded-xl transition-colors text-left border-t border-slate-100 mt-1"
                 >
                   <span>Đăng xuất</span>
                 </button>

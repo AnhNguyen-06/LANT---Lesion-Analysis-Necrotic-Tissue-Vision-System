@@ -5,10 +5,12 @@ import Link from "next/link";
 import { WoundCanvas } from "@/components/wound-canvas";
 import { RecoveryChart } from "@/components/recovery-chart";
 import { DressingRecommender } from "@/components/dressing-recommender";
-import { MockStorageService } from "@/lib/mock-storage";
+import { DBStore } from "@/lib/db-store";
 import { Patient, WoundProfile, SnapshotLog, ClinicianReview } from "@/types/medical-schema";
+import { useAuth } from "@/context/AuthContext";
 
 export default function PatientDashboardPage() {
+  const { user } = useAuth();
   const [patient, setPatient] = useState<Patient | null>(null);
   const [activeWound, setActiveWound] = useState<WoundProfile | null>(null);
   const [activeSnapshot, setActiveSnapshot] = useState<SnapshotLog | null>(null);
@@ -16,8 +18,8 @@ export default function PatientDashboardPage() {
 
   useEffect(() => {
     const loadData = () => {
-      const activeId = localStorage.getItem("LANT_ACTIVE_PATIENT_ID") || "PAT-10842";
-      const p = MockStorageService.getPatient(activeId) || MockStorageService.getPatients()[0];
+      const activeId = user?.patientId || localStorage.getItem("LANT_ACTIVE_PATIENT_ID") || "PAT-10842";
+      const p = DBStore.getPatientById(activeId) || DBStore.getPatients()[0];
       setPatient(p);
 
       if (p && p.wounds.length > 0) {
@@ -27,7 +29,7 @@ export default function PatientDashboardPage() {
           const latest = defaultWound.snapshots[defaultWound.snapshots.length - 1];
           setActiveSnapshot(latest);
         }
-        const revList = MockStorageService.getReviews(defaultWound.id);
+        const revList = DBStore.getSignedSoapRecords(p.id, defaultWound.id);
         setReviews(revList);
       }
     };
@@ -35,21 +37,34 @@ export default function PatientDashboardPage() {
     loadData();
 
     const handlePatientChange = () => loadData();
+    const handleSoapSigned = () => loadData();
+
     window.addEventListener("LANT_PATIENT_CHANGED", handlePatientChange);
-    return () => window.removeEventListener("LANT_PATIENT_CHANGED", handlePatientChange);
-  }, []);
+    window.addEventListener("LANT_SOAP_SIGNED" as any, handleSoapSigned);
+
+    return () => {
+      window.removeEventListener("LANT_PATIENT_CHANGED", handlePatientChange);
+      window.removeEventListener("LANT_SOAP_SIGNED" as any, handleSoapSigned);
+    };
+  }, [user]);
 
   const handleSelectWound = (wound: WoundProfile) => {
     setActiveWound(wound);
     if (wound.snapshots.length > 0) {
       setActiveSnapshot(wound.snapshots[wound.snapshots.length - 1]);
     }
-    const revList = MockStorageService.getReviews(wound.id);
-    setReviews(revList);
+    if (patient) {
+      const revList = DBStore.getSignedSoapRecords(patient.id, wound.id);
+      setReviews(revList);
+    }
   };
 
   const handleSelectSnapshot = (snapshot: SnapshotLog) => {
     setActiveSnapshot(snapshot);
+  };
+
+  const handlePrintEmr = () => {
+    window.print();
   };
 
   if (!patient || !activeWound || !activeSnapshot) {
@@ -65,7 +80,7 @@ export default function PatientDashboardPage() {
   const activeWounds = patient.wounds.filter(w => w.status === "active" || w.status === "critical_triage");
 
   return (
-    <main className="mx-auto max-w-7xl w-full px-4 sm:px-6 lg:px-8 py-10 space-y-10 font-sans">
+    <main className="mx-auto max-w-7xl w-full px-4 sm:px-6 lg:px-8 py-8 space-y-8 font-sans">
       
       {/* EXPANDED SPACIOUS PATIENT PROFILE HEADER */}
       <div className="rounded-3xl bg-white/95 p-8 lg:p-10 shadow-clinical flex flex-col lg:flex-row lg:items-center justify-between gap-8 border border-oceanic-100/70">
@@ -91,6 +106,8 @@ export default function PatientDashboardPage() {
           <div className="flex flex-wrap items-center gap-4 text-xs text-dusk-600 font-medium pt-1">
             <span>Tuổi: <strong className="text-slate-800">{patient.age} ({patient.gender})</strong></span>
             <span>•</span>
+            <span>Địa chỉ: <strong className="text-slate-800">{patient.address ? `${patient.address.ward}, ${patient.address.district}, ${patient.address.province}` : "TP. Hồ Chí Minh"}</strong></span>
+            <span>•</span>
             <span>Bác sĩ phụ trách: <strong className="text-oceanic">{patient.primaryPhysician}</strong></span>
           </div>
         </div>
@@ -107,7 +124,7 @@ export default function PatientDashboardPage() {
             href="/patient/telehealth"
             className="px-5 py-3.5 rounded-2xl border border-oceanic-200 bg-azure-mist/60 text-xs font-bold text-oceanic hover:bg-oceanic-50 transition-colors"
           >
-            <span>Liên hệ bác sĩ</span>
+            <span>Hội chẩn & Nhắn tin Bác sĩ</span>
           </Link>
         </div>
       </div>
@@ -138,70 +155,84 @@ export default function PatientDashboardPage() {
                 }`}
               >
                 {/* Front Card Summary */}
-                <div className="flex items-start justify-between gap-3">
-                  <div className="space-y-1.5">
-                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600 font-mono">
-                      {wound.id}
+                <div className="space-y-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <span className="text-[10px] font-bold text-dusk-400 uppercase tracking-wider font-heading block">
+                        {wound.anatomicalLocation}
+                      </span>
+                      <h3 className="text-base font-bold text-oceanic font-heading mt-0.5">
+                        {wound.title}
+                      </h3>
+                    </div>
+                    
+                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono ${
+                      isWoundCritical 
+                        ? "bg-red-50 text-red-700 border border-red-200" 
+                        : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                    }`}>
+                      {isWoundCritical ? "Báo động" : "Ổn định"}
                     </span>
-                    <h3 className="text-base font-bold text-oceanic font-heading group-hover:text-sapphire transition-colors line-clamp-1">
-                      {wound.title}
-                    </h3>
-                    <p className="text-xs text-dusk-500">{wound.anatomicalLocation}</p>
                   </div>
 
-                  <div className="text-right">
-                    <span className="text-xs font-mono font-bold text-slate-400 block">Diện tích</span>
-                    <span className="text-xl font-black font-mono text-oceanic">
-                      {wound.currentAreaCm2} <span className="text-xs font-normal text-slate-500">cm²</span>
-                    </span>
+                  {/* Telemetry Metrics */}
+                  <div className="grid grid-cols-3 gap-2 py-3 px-3.5 rounded-2xl bg-slate-50/80 border border-slate-100">
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-heading block">Diện tích</span>
+                      <span className="text-sm font-black font-mono text-oceanic">{wound.currentAreaCm2} cm²</span>
+                    </div>
+
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-heading block">Điểm WHI</span>
+                      <span className="text-sm font-black font-mono text-sapphire">{wound.currentWHI}/100</span>
+                    </div>
+
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-heading block">Số lần quét</span>
+                      <span className="text-sm font-black font-mono text-slate-700">{wound.snapshots.length} mốc</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1">
+                    <span>Mốc ban đầu: <strong className="font-mono">{wound.baselineAreaCm2} cm²</strong></span>
+                    <span className="text-sapphire font-bold">Xem chi tiết →</span>
                   </div>
                 </div>
 
-                {/* Status Indicator */}
-                <div className="flex items-center justify-between mt-5 pt-3 border-t border-slate-100 text-xs">
-                  <div className="flex items-center gap-1.5 font-bold font-mono">
-                    <span className="text-slate-400">WHI:</span>
-                    <span className={wound.currentWHI >= 70 ? 'text-emerald-600' : 'text-amber-600'}>
-                      {wound.currentWHI}/100
-                    </span>
+                {/* Hover-to-Reveal Overlay */}
+                {latestSnap && (
+                  <div className="absolute inset-0 rounded-3xl bg-slate-950/90 text-white p-6 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col justify-between pointer-events-none backdrop-blur-xs">
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center border-b border-white/10 pb-2">
+                        <span className="text-xs font-bold font-heading text-cyan-300">Phân tách mô học RYB</span>
+                        <span className="text-[10px] font-mono text-slate-300">Day {latestSnap.dayIndex}</span>
+                      </div>
+
+                      <div className="space-y-1.5 text-xs font-medium">
+                        <div className="flex justify-between">
+                          <span className="text-red-400">Mô hạt đỏ:</span>
+                          <span className="font-mono">{latestSnap.rybMetrics.redPercent}%</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-amber-300">Mô vảy vàng:</span>
+                          <span className="font-mono">{latestSnap.rybMetrics.yellowPercent}%</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-300">Hoại tử đen:</span>
+                          <span className="font-mono">{latestSnap.rybMetrics.blackPercent}%</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-pink-300">Biểu bì hồng:</span>
+                          <span className="font-mono">{latestSnap.rybMetrics.pinkPercent}%</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="pt-2 border-t border-white/10 text-[11px] text-slate-300 truncate">
+                      Gạc khuyến nghị: <span className="text-white font-semibold">{latestSnap.recommendation.primaryDressing}</span>
+                    </div>
                   </div>
-
-                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono ${
-                    isWoundCritical 
-                      ? "bg-red-100 text-red-700" 
-                      : "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                  }`}>
-                    {isWoundCritical ? "Cần hội chẩn" : "Tiến triển tốt"}
-                  </span>
-                </div>
-
-                {/* PROGRESSIVE DISCLOSURE: HOVER TO REVEAL RYB PROGRESS */}
-                <div className="mt-3 pt-3 border-t border-slate-100 max-h-0 opacity-0 overflow-hidden group-hover:max-h-40 group-hover:opacity-100 transition-all duration-200 ease-in-out space-y-2.5">
-                  <div className="text-[11px] font-semibold text-slate-600">
-                    Mô học: 
-                    <span className="text-red-600 ml-1">Đỏ {latestSnap?.rybMetrics.redPercent}%</span> • 
-                    <span className="text-amber-600 ml-1">Vàng {latestSnap?.rybMetrics.yellowPercent}%</span> • 
-                    <span className="text-slate-900 ml-1">Đen {latestSnap?.rybMetrics.blackPercent}%</span> • 
-                    <span className="text-pink-600 ml-1">Hồng {latestSnap?.rybMetrics.pinkPercent}%</span>
-                  </div>
-
-                  <div className="h-2 w-full rounded-full overflow-hidden flex bg-slate-100">
-                    <div style={{ width: `${latestSnap?.rybMetrics.redPercent}%` }} className="bg-medical-granulation h-full" />
-                    <div style={{ width: `${latestSnap?.rybMetrics.yellowPercent}%` }} className="bg-medical-slough h-full" />
-                    <div style={{ width: `${latestSnap?.rybMetrics.blackPercent}%` }} className="bg-slate-950 h-full" />
-                    <div style={{ width: `${latestSnap?.rybMetrics.pinkPercent}%` }} className="bg-medical-epithelial h-full" />
-                  </div>
-
-                  <div className="flex items-center justify-between pt-1">
-                    <span className="text-[10px] text-slate-400 font-mono">
-                      {wound.snapshots.length} mốc ghi nhận
-                    </span>
-                    <span className="text-xs font-bold text-sapphire">
-                      Xem chi tiết →
-                    </span>
-                  </div>
-                </div>
-
+                )}
               </div>
             );
           })}
@@ -209,33 +240,31 @@ export default function PatientDashboardPage() {
       </div>
 
       {/* TIME-SERIES SCRUBBER */}
-      <div className="rounded-3xl bg-white/95 p-7 shadow-clinical space-y-5 border border-oceanic-100/70">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+      <div className="rounded-3xl bg-white/95 p-7 shadow-clinical space-y-4 border border-oceanic-100/70">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <div>
-            <h3 className="text-base font-bold text-oceanic font-heading">
-              Thanh tua chuỗi thời gian: <span className="font-editorial italic font-normal text-sapphire">{activeWound.title}</span>
+            <h3 className="text-xs font-bold text-oceanic font-heading uppercase tracking-wider">
+              Chuỗi thời gian hình ảnh vết thương ({activeWound.title})
             </h3>
-            <p className="text-[11px] text-dusk-500">
-              Chọn từng mốc ngày để đối chiếu diện tích thực và chất lượng phục hồi
-            </p>
+            <p className="text-[11px] text-slate-500">Nhấp chọn từng ngày để theo dõi tốc độ thu hẹp vết thương</p>
           </div>
 
-          <span className="text-xs font-mono font-bold text-slate-500">
-            {activeWound.snapshots.length} mốc ghi nhận
+          <span className="text-xs font-mono font-bold text-oceanic">
+            Đang xem: Ngày {activeSnapshot.dayIndex}
           </span>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-3">
           {activeWound.snapshots.map((snap) => {
             const isSelected = snap.id === activeSnapshot.id;
             return (
               <button
                 key={snap.id}
                 onClick={() => handleSelectSnapshot(snap)}
-                className={`p-4 rounded-2xl text-left transition-all ${
+                className={`p-3 rounded-2xl text-left transition-all border ${
                   isSelected
-                    ? "bg-oceanic text-white shadow-md scale-[1.01]"
-                    : "bg-slate-50/80 hover:bg-white text-slate-700 border border-slate-200/80"
+                    ? "bg-oceanic text-white border-oceanic shadow-md font-bold"
+                    : "bg-slate-50/80 hover:bg-white border-slate-200/80 text-slate-700"
                 }`}
               >
                 <div className="flex items-center justify-between mb-1.5">
@@ -261,7 +290,7 @@ export default function PatientDashboardPage() {
       {/* ACTIVE INSPECTOR GRID */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         
-        {/* Left Column: Canvas Viewport & SOAP Signatures */}
+        {/* Left Column: Canvas Viewport & Signed SOAP EMR */}
         <div className="lg:col-span-6 space-y-8">
           <WoundCanvas
             imageUrl={activeSnapshot.imageUrl}
@@ -272,26 +301,64 @@ export default function PatientDashboardPage() {
             interactive={true}
           />
 
-          {reviews.length > 0 && (
-            <div className="rounded-3xl bg-white/95 p-7 shadow-clinical space-y-3.5 border border-emerald-200">
-              <div className="flex items-center justify-between border-b border-emerald-100 pb-2.5">
-                <span className="text-xs font-bold text-emerald-950 font-heading">
-                  Bệnh án điện tử đã ký duyệt (SOAP Note)
-                </span>
-                <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-bold text-emerald-800 font-mono">
-                  Đã ký số
-                </span>
+          {/* OFFICIAL SIGNED SOAP CLINICAL NOTE */}
+          {reviews.length > 0 ? (
+            <div className="rounded-3xl bg-white/95 p-7 shadow-clinical space-y-4 border border-emerald-300">
+              <div className="flex items-center justify-between border-b border-emerald-100 pb-3">
+                <div>
+                  <h3 className="text-xs font-bold text-emerald-950 font-heading uppercase tracking-wider">
+                    Bệnh án điện tử đã ký số (Official Signed SOAP EMR)
+                  </h3>
+                  <p className="text-[11px] text-slate-500">Chứng thực bởi Bác sĩ chuyên khoa phụ trách</p>
+                </div>
+
+                <button
+                  onClick={handlePrintEmr}
+                  className="px-3.5 py-1.5 rounded-xl bg-emerald-100 hover:bg-emerald-200 text-emerald-900 text-xs font-bold transition-colors font-mono"
+                >
+                  <span>In / Tải PDF</span>
+                </button>
               </div>
 
-              <div className="space-y-2 text-xs text-slate-700 leading-relaxed">
-                <p><strong className="text-oceanic">Đánh giá Bác sĩ:</strong> {reviews[0].soapAssessment}</p>
-                <p><strong className="text-oceanic">Phác đồ điều trị:</strong> {reviews[0].soapPlan}</p>
+              {/* Complete SOAP Breakdown */}
+              <div className="space-y-3 text-xs text-slate-800 leading-relaxed bg-slate-50/70 p-4 rounded-2xl border border-slate-200/80">
+                {reviews[0].soapSubjective && (
+                  <p>
+                    <strong className="text-oceanic font-heading">S — Triệu chứng (Subjective):</strong> {reviews[0].soapSubjective}
+                  </p>
+                )}
+                {reviews[0].soapObjective && (
+                  <p className="font-mono text-[11px]">
+                    <strong className="text-oceanic font-heading font-sans text-xs">O — Đo đạc AI (Objective):</strong> {reviews[0].soapObjective}
+                  </p>
+                )}
+                <p>
+                  <strong className="text-oceanic font-heading">A — Đánh giá Bác sĩ (Assessment):</strong> {reviews[0].soapAssessment}
+                </p>
+                <p>
+                  <strong className="text-oceanic font-heading">P — Phác đồ điều trị (Plan):</strong> {reviews[0].soapPlan}
+                </p>
               </div>
 
-              <div className="pt-2 flex items-center justify-between text-[11px] text-slate-500 border-t border-slate-100 font-mono">
-                <span>Ký bởi: <strong className="text-slate-800">{reviews[0].clinicianName}</strong></span>
-                <span>{new Date(reviews[0].signedAt || "").toLocaleDateString("vi-VN")}</span>
+              {/* Cryptographic Verification Stamp */}
+              <div className="pt-2 flex flex-col sm:flex-row items-start sm:items-center justify-between text-xs text-slate-500 border-t border-slate-100 gap-2">
+                <div>
+                  <span className="block font-medium">Bác sĩ ký duyệt: <strong className="text-slate-800">{reviews[0].clinicianName}</strong></span>
+                  <span className="text-[10px] text-slate-400">{reviews[0].clinicianTitle}</span>
+                </div>
+
+                <div className="text-right font-mono text-[11px]">
+                  <span className="inline-block px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold mb-0.5">
+                    {reviews[0].certificateId || "LANT-CERT-2026-8841"}
+                  </span>
+                  <p className="text-[10px] text-slate-400">{new Date(reviews[0].signedAt || reviews[0].date).toLocaleString("vi-VN")}</p>
+                </div>
               </div>
+            </div>
+          ) : (
+            <div className="rounded-3xl bg-white/95 p-6 text-center text-xs text-slate-500 border border-slate-200">
+              <p>Chưa có bản ghi SOAP nào được ký duyệt cho vết thương này.</p>
+              <p className="text-[11px] text-slate-400 mt-1">Bác sĩ sẽ kiểm tra và ký số sau phiên hội chẩn telehealth.</p>
             </div>
           )}
         </div>

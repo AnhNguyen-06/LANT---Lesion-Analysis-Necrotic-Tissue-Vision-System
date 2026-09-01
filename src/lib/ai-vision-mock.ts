@@ -149,7 +149,9 @@ export function generateDressingRecommendation(ryb: RYBMetrics, exudate: string)
 export interface ClinicalPresetCase {
   id: string;
   name: string;
+  title: string;
   location: string;
+  anatomicalLocation: string;
   etiology: string;
   rawImage: string;
   defaultRyb: { red: number; yellow: number; black: number; pink: number };
@@ -161,7 +163,9 @@ export const CLINICAL_PRESETS: ClinicalPresetCase[] = [
   {
     id: "case-dfu",
     name: "Loét bàn chân đái tháo đường (Wagner độ II)",
+    title: "Loét bàn chân đái tháo đường (Wagner độ II)",
     location: "Gót chân trái (Left Plantar Heel)",
+    anatomicalLocation: "Gót chân trái (Left Plantar Heel)",
     etiology: "diabetic_foot",
     rawImage: "/presets/diabetic_foot.jpg",
     defaultRyb: { red: 45, yellow: 35, black: 15, pink: 5 },
@@ -171,7 +175,9 @@ export const CLINICAL_PRESETS: ClinicalPresetCase[] = [
   {
     id: "case-surgical",
     name: "Hở vết mổ sau phẫu thuật thành bụng",
+    title: "Hở vết mổ sau phẫu thuật thành bụng",
     location: "Thành bụng dưới (Lower Abdominal Midline)",
+    anatomicalLocation: "Thành bụng dưới (Lower Abdominal Midline)",
     etiology: "surgical_dehiscence",
     rawImage: "/presets/surgical_wound.jpg",
     defaultRyb: { red: 70, yellow: 18, black: 2, pink: 10 },
@@ -181,7 +187,9 @@ export const CLINICAL_PRESETS: ClinicalPresetCase[] = [
   {
     id: "case-pressure",
     name: "Loét tì đè vùng xương cùng (Giai đoạn III)",
+    title: "Loét tì đè vùng xương cùng (Giai đoạn III)",
     location: "Vùng cùng cụt (Sacral Region)",
+    anatomicalLocation: "Vùng cùng cụt (Sacral Region)",
     etiology: "pressure_injury",
     rawImage: "/presets/pressure_injury.jpg",
     defaultRyb: { red: 30, yellow: 45, black: 20, pink: 5 },
@@ -191,7 +199,9 @@ export const CLINICAL_PRESETS: ClinicalPresetCase[] = [
   {
     id: "case-burn",
     name: "Bỏng nước sôi độ II nông đang biểu mô hóa",
+    title: "Bỏng nước sôi độ II nông đang biểu mô hóa",
     location: "Cẳng tay phải (Right Forearm)",
+    anatomicalLocation: "Cẳng tay phải (Right Forearm)",
     etiology: "burn_trauma",
     rawImage: "/presets/burn_wound.jpg",
     defaultRyb: { red: 35, yellow: 5, black: 0, pink: 60 },

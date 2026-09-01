@@ -155,7 +155,7 @@ export function PatientNavbar({ onOpenReminderModal, onOpenHazardModal }: Patien
               <span>Tài khoản</span>
             </button>
 
-            {isUserMenuOpen && (
+                {isUserMenuOpen && (
               <div className="absolute right-0 mt-2 w-56 rounded-2xl border border-slate-200 bg-white p-2 shadow-clinical-lg z-50 animate-in fade-in zoom-in-95">
                 <div className="px-3 py-2 border-b border-slate-100 mb-1">
                   <p className="text-xs font-bold text-slate-900 font-heading">{user?.fullName || "Nguyễn Văn An"}</p>
@@ -165,12 +165,30 @@ export function PatientNavbar({ onOpenReminderModal, onOpenHazardModal }: Patien
                   </span>
                 </div>
 
+                <Link
+                  href="/patient/profile"
+                  onClick={() => setIsUserMenuOpen(false)}
+                  className="w-full block px-3 py-2 text-xs font-bold text-oceanic hover:bg-oceanic-50 rounded-xl transition-colors text-left"
+                >
+                  <span>Hồ sơ cá nhân & Địa chỉ</span>
+                </Link>
+
+                <button
+                  onClick={() => {
+                    setIsUserMenuOpen(false);
+                    window.dispatchEvent(new CustomEvent("LANT_TRIGGER_TOUR"));
+                  }}
+                  className="w-full px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 rounded-xl transition-colors text-left"
+                >
+                  <span>Xem lại hướng dẫn</span>
+                </button>
+
                 <button
                   onClick={() => {
                     setIsUserMenuOpen(false);
                     logout();
                   }}
-                  className="w-full px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-50 rounded-xl transition-colors text-left"
+                  className="w-full px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-50 rounded-xl transition-colors text-left border-t border-slate-100 mt-1"
                 >
                   <span>Đăng xuất</span>
                 </button>

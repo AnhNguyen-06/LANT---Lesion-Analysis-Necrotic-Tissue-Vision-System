@@ -2,21 +2,40 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { MockStorageService } from "@/lib/mock-storage";
+import { DBStore } from "@/lib/db-store";
 import { Patient, TelehealthSession } from "@/types/medical-schema";
+import { useAuth } from "@/context/AuthContext";
+import { TelehealthCallModal } from "@/components/telehealth-call-modal";
 
 export default function DoctorDashboardPage() {
+  const { user } = useAuth();
   const [patients, setPatients] = useState<Patient[]>([]);
   const [telehealthList, setTelehealthList] = useState<TelehealthSession[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRiskFilter, setSelectedRiskFilter] = useState<"all" | "high_critical" | "moderate" | "low">("all");
 
+  // Direct Call Modal from Dashboard
+  const [callingPatient, setCallingPatient] = useState<Patient | null>(null);
+
   useEffect(() => {
-    const pList = MockStorageService.getPatients();
+    const pList = DBStore.getPatients();
     setPatients(pList);
 
-    const tList = MockStorageService.getTelehealthSessions();
+    const tList = DBStore.getAppointments();
     setTelehealthList(tList);
+
+    const handlePatientChange = () => {
+      setPatients(DBStore.getPatients());
+      setTelehealthList(DBStore.getAppointments());
+    };
+
+    window.addEventListener("LANT_PATIENT_CHANGED", handlePatientChange);
+    window.addEventListener("LANT_APPOINTMENT_ADDED" as any, handlePatientChange);
+
+    return () => {
+      window.removeEventListener("LANT_PATIENT_CHANGED", handlePatientChange);
+      window.removeEventListener("LANT_APPOINTMENT_ADDED" as any, handlePatientChange);
+    };
   }, []);
 
   // Filter & sort High Risk to top
@@ -34,14 +53,32 @@ export default function DoctorDashboardPage() {
 
   const criticalCount = patients.filter(p => p.riskTier === "high_critical").length;
 
+  const handleStartCallFromDashboard = (patient: Patient) => {
+    if (patient.wounds.length === 0) return;
+    const wound = patient.wounds[0];
+
+    DBStore.sendCallSignal({
+      id: `CALL-${Date.now()}`,
+      callId: `ROOM-${patient.id}-${Date.now()}`,
+      doctorId: user?.id || "USR-DOC-01",
+      doctorName: user?.fullName || "BS. CKI Trần Minh Đức",
+      patientId: patient.id,
+      woundTitle: wound.title,
+      status: "calling",
+      startedAt: new Date().toISOString()
+    });
+
+    setCallingPatient(patient);
+  };
+
   return (
-    <main className="mx-auto max-w-7xl w-full px-4 sm:px-6 lg:px-8 py-10 space-y-10 font-sans">
+    <main className="mx-auto max-w-7xl w-full px-4 sm:px-6 lg:px-8 py-8 space-y-8 font-sans">
       
       {/* Header Banner - Pure Typography */}
       <div className="rounded-3xl bg-white/95 p-8 lg:p-10 text-slate-900 shadow-clinical flex flex-col lg:flex-row lg:items-center justify-between gap-6 border border-oceanic-100/70">
         <div className="space-y-2.5">
           <span className="rounded-full bg-oceanic-50 px-3 py-0.5 text-xs font-bold font-mono tracking-wider uppercase border border-oceanic-200 text-oceanic inline-block">
-            Cổng bác sĩ chuyên khoa
+            Cổng bác sĩ chuyên khoa — {user?.fullName || "BS. CKI Trần Minh Đức"}
           </span>
           <h1 className="text-3xl lg:text-4xl font-black font-heading tracking-tight text-oceanic">
             Bảng phân luồng nguy cơ & <span className="font-editorial italic font-normal text-sapphire">hàng đợi hội chẩn</span>
@@ -57,6 +94,13 @@ export default function DoctorDashboardPage() {
               <span>{criticalCount} ca cảnh báo đỏ khẩn cấp</span>
             </div>
           )}
+
+          <Link
+            href="/doctor/profile"
+            className="px-5 py-2.5 rounded-2xl bg-white border border-oceanic-200 text-oceanic text-xs font-bold hover:bg-oceanic-50 transition-colors shadow-2xs font-mono"
+          >
+            <span>Hồ sơ & CCHN →</span>
+          </Link>
         </div>
       </div>
 
@@ -65,7 +109,7 @@ export default function DoctorDashboardPage() {
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <div>
             <h3 className="text-base font-bold text-oceanic font-heading">
-              Lịch hẹn hội chẩn telehealth <span className="font-editorial italic font-normal text-sapphire">trực tuyến</span>
+              Lịch hẹn hội chẩn telehealth <span className="font-editorial italic font-normal text-sapphire">hôm nay ({telehealthList.length})</span>
             </h3>
             <p className="text-[11px] text-dusk-500">
               Phòng khám trực tuyến đồng bộ canvas vết thương và ký số điện tử
@@ -76,35 +120,50 @@ export default function DoctorDashboardPage() {
             href="/doctor/telehealth"
             className="text-xs font-bold text-sapphire hover:underline"
           >
-            <span>Xem tất cả ({telehealthList.length}) →</span>
+            <span>Quản lý tất cả ({telehealthList.length}) →</span>
           </Link>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {telehealthList.map((session) => (
-            <div
-              key={session.id}
-              className="rounded-2xl bg-azure-mist/30 p-5 flex flex-col justify-between space-y-3 border border-oceanic-100/60 hover:border-oceanic transition-colors"
-            >
-              <div>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-oceanic font-heading">{session.patientName}</span>
-                  <span className="rounded-full bg-sapphire-50 text-sapphire-800 px-2.5 py-0.5 text-[10px] font-bold font-mono border border-sapphire-200">
-                    {new Date(session.scheduledTime).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
-                  </span>
-                </div>
-                <h4 className="text-xs font-semibold text-slate-800 mt-1">{session.woundTitle}</h4>
-                <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">{session.clinicalSummary}</p>
-              </div>
-
-              <Link
-                href={`/doctor/patient/${session.patientId}`}
-                className="py-2.5 px-4 text-center rounded-xl bg-indigoContrast text-xs font-bold text-white hover:bg-indigoContrast-900 shadow-xs transition-all"
+          {telehealthList.map((session) => {
+            const matchedPatient = patients.find(p => p.id === session.patientId);
+            return (
+              <div
+                key={session.id}
+                className="rounded-2xl bg-azure-mist/30 p-5 flex flex-col justify-between space-y-3 border border-oceanic-100/60 hover:border-oceanic transition-colors"
               >
-                <span>Mở bệnh án & phòng telehealth →</span>
-              </Link>
-            </div>
-          ))}
+                <div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-oceanic font-heading text-sm">{session.patientName}</span>
+                    <span className="rounded-full bg-sapphire-50 text-sapphire-800 px-2.5 py-0.5 text-[10px] font-bold font-mono border border-sapphire-200">
+                      {new Date(session.scheduledTime).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                  </div>
+                  <h4 className="text-xs font-semibold text-slate-800 mt-1">{session.woundTitle}</h4>
+                  <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">{session.clinicalSummary}</p>
+                </div>
+
+                <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
+                  {matchedPatient && matchedPatient.wounds.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => handleStartCallFromDashboard(matchedPatient)}
+                      className="flex-1 py-2 px-3 text-center rounded-xl bg-emerald-600 hover:bg-emerald-700 text-xs font-bold text-white shadow-xs transition-all"
+                    >
+                      <span>Bắt đầu gọi Telehealth</span>
+                    </button>
+                  )}
+
+                  <Link
+                    href={`/doctor/patient/${session.patientId}`}
+                    className="flex-1 py-2 px-3 text-center rounded-xl bg-indigoContrast text-xs font-bold text-white hover:bg-indigoContrast-900 shadow-xs transition-all"
+                  >
+                    <span>Xem bệnh án & Ký SOAP →</span>
+                  </Link>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -139,101 +198,130 @@ export default function DoctorDashboardPage() {
                   selectedRiskFilter === "all" ? "bg-white text-oceanic shadow-xs" : "text-slate-600 hover:text-oceanic"
                 }`}
               >
-                Tất cả
+                Tất cả ({patients.length})
               </button>
               <button
                 onClick={() => setSelectedRiskFilter("high_critical")}
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  selectedRiskFilter === "high_critical" ? "bg-red-600 text-white shadow-xs" : "text-red-700 hover:text-red-800"
+                  selectedRiskFilter === "high_critical" ? "bg-red-600 text-white shadow-xs" : "text-red-700 hover:bg-red-50"
                 }`}
               >
-                Cảnh báo đỏ
+                Nguy cơ cao
               </button>
               <button
                 onClick={() => setSelectedRiskFilter("moderate")}
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  selectedRiskFilter === "moderate" ? "bg-amber-500 text-white shadow-xs" : "text-amber-700 hover:text-amber-800"
+                  selectedRiskFilter === "moderate" ? "bg-amber-600 text-white shadow-xs" : "text-amber-800 hover:bg-amber-50"
                 }`}
               >
                 Nguy cơ vừa
+              </button>
+              <button
+                onClick={() => setSelectedRiskFilter("low")}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  selectedRiskFilter === "low" ? "bg-emerald-600 text-white shadow-xs" : "text-emerald-800 hover:bg-emerald-50"
+                }`}
+              >
+                Ổn định
               </button>
             </div>
           </div>
         </div>
 
-        {/* Patient Rows */}
-        <div className="space-y-4">
+        {/* Triage Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredPatients.map((p) => {
-            const activeWound = p.wounds.find(w => w.status === "critical_triage" || w.status === "active") || p.wounds[0];
-            const latestSnap = activeWound?.snapshots[activeWound.snapshots.length - 1];
-            const isHighRisk = p.riskTier === "high_critical";
+            const mainWound = p.wounds[0];
+            const latestSnap = mainWound?.snapshots[mainWound.snapshots.length - 1];
 
             return (
               <div
                 key={p.id}
-                className={`rounded-3xl p-6 bg-white/95 shadow-clinical hover:shadow-clinical-lg transition-all duration-150 flex flex-col md:flex-row md:items-center justify-between gap-6 ${
-                  isHighRisk ? "border border-red-200 bg-red-50/20" : "border border-oceanic-100/70"
-                }`}
+                className="rounded-3xl bg-white/95 p-6 shadow-clinical space-y-4 hover:shadow-clinical-lg transition-all border border-oceanic-100/70 flex flex-col justify-between"
               >
-                {/* Left: Demographics */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center gap-2.5">
-                    <h3 className="text-base font-bold text-oceanic font-heading">{p.fullName}</h3>
-                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600 font-mono border border-slate-200">
-                      {p.medicalRecordNumber}
-                    </span>
+                <div className="space-y-3">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h3 className="text-base font-bold text-oceanic font-heading">{p.fullName}</h3>
+                      <span className="text-xs text-dusk-500 font-mono">{p.medicalRecordNumber} • {p.age} tuổi</span>
+                    </div>
+
                     <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono ${
-                      isHighRisk ? "bg-red-100 text-red-700" : p.riskTier === "moderate" ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"
+                      p.riskTier === "high_critical"
+                        ? "bg-red-100 text-red-700 border border-red-200"
+                        : p.riskTier === "moderate"
+                        ? "bg-amber-100 text-amber-800 border border-amber-200"
+                        : "bg-emerald-100 text-emerald-800 border border-emerald-200"
                     }`}>
-                      {isHighRisk ? "Báo động đỏ" : p.riskTier === "moderate" ? "Nguy cơ vừa" : "Tiến triển tốt"}
+                      {p.riskTier === "high_critical" ? "Nguy kịch" : p.riskTier === "moderate" ? "Trung bình" : "Ổn định"}
                     </span>
                   </div>
 
-                  <p className="text-xs text-slate-600">
-                    {p.age} tuổi ({p.gender}) • <strong className="text-slate-800">{activeWound?.title}</strong>
-                  </p>
+                  {mainWound && latestSnap ? (
+                    <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 space-y-2 text-xs">
+                      <p className="font-semibold text-slate-800 truncate">{mainWound.title}</p>
+                      
+                      <div className="grid grid-cols-3 gap-1 font-mono text-[11px]">
+                        <div>
+                          <span className="text-slate-400 text-[10px] block">Diện tích</span>
+                          <strong className="text-oceanic">{mainWound.currentAreaCm2} cm²</strong>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 text-[10px] block">WHI</span>
+                          <strong className="text-sapphire">{mainWound.currentWHI}</strong>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 text-[10px] block">Hoại tử</span>
+                          <strong className="text-red-600">{latestSnap.rybMetrics.blackPercent}%</strong>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-3.5 rounded-2xl bg-slate-50 text-xs text-slate-400 text-center">
+                      Chưa có dữ liệu vết thương
+                    </div>
+                  )}
                 </div>
 
-                {/* Middle: Metrics */}
-                <div className="grid grid-cols-3 gap-6 border-t md:border-t-0 md:border-l border-slate-100 pt-4 md:pt-0 md:pl-8 text-xs">
-                  <div>
-                    <span className="text-[10px] font-bold text-slate-400 block uppercase">DIỆN TÍCH</span>
-                    <span className="font-mono font-black text-oceanic text-base">
-                      {activeWound?.currentAreaCm2} cm²
-                    </span>
-                  </div>
-
-                  <div>
-                    <span className="text-[10px] font-bold text-slate-400 block uppercase">ĐIỂM WHI</span>
-                    <span className={`font-mono font-black text-base ${
-                      (activeWound?.currentWHI || 0) >= 70 ? 'text-emerald-600' : 'text-amber-600'
-                    }`}>
-                      {activeWound?.currentWHI}/100
-                    </span>
-                  </div>
-
-                  <div>
-                    <span className="text-[10px] font-bold text-slate-400 block uppercase">HOẠI TỬ ĐEN</span>
-                    <span className="font-mono font-black text-red-600 text-base">
-                      {latestSnap?.rybMetrics.blackPercent}%
-                    </span>
-                  </div>
-                </div>
-
-                {/* Right: CTA */}
-                <div className="pt-2 md:pt-0">
+                <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
                   <Link
                     href={`/doctor/patient/${p.id}`}
-                    className="px-6 py-3 rounded-2xl bg-indigoContrast text-xs font-bold text-white hover:bg-indigoContrast-900 shadow-xs transition-all inline-block"
+                    className="flex-1 py-2.5 px-3 text-center rounded-xl bg-oceanic text-white text-xs font-bold hover:bg-oceanic-800 transition-colors shadow-xs"
                   >
-                    <span>Xem bệnh án & ký SOAP →</span>
+                    <span>Xem bệnh án & Ký SOAP →</span>
                   </Link>
+
+                  <button
+                    type="button"
+                    onClick={() => handleStartCallFromDashboard(p)}
+                    className="py-2.5 px-3 rounded-xl border border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 text-xs font-bold transition-colors font-mono"
+                    title="Gọi video Telehealth ngay"
+                  >
+                    <span>Gọi</span>
+                  </button>
                 </div>
               </div>
             );
           })}
         </div>
       </div>
+
+      {/* Telehealth Call Modal Triggered from Dashboard */}
+      {callingPatient && callingPatient.wounds.length > 0 && (
+        <TelehealthCallModal
+          isOpen={!!callingPatient}
+          onClose={() => {
+            DBStore.clearCallSignal(callingPatient.id);
+            setCallingPatient(null);
+          }}
+          patient={callingPatient}
+          wound={callingPatient.wounds[0]}
+          activeSnapshot={callingPatient.wounds[0].snapshots[callingPatient.wounds[0].snapshots.length - 1]}
+          onSignSoap={(assessment, plan) => {
+            console.log("Signed SOAP in dashboard call modal:", assessment, plan);
+          }}
+        />
+      )}
 
     </main>
   );

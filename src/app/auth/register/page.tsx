@@ -37,6 +37,7 @@ function RegisterForm() {
         fullName,
         email,
         phone,
+        password,
         role,
         medicalRecordNumber: role === "patient" ? (medicalId || `MRN-${Math.floor(1000 + Math.random() * 9000)}`) : undefined,
         licenseNumber: role === "doctor" ? (medicalId || `CCHN-${Math.floor(1000 + Math.random() * 9000)}`) : undefined,
