@@ -9,8 +9,9 @@ import { HazardAlertModal } from "@/components/hazard-alert";
 import { IncomingCallModal } from "@/components/incoming-call-modal";
 import { TelehealthCallModal } from "@/components/telehealth-call-modal";
 import { OnboardingTour } from "@/components/onboarding-tour";
+import { TelehealthSignalingEngine, TelehealthSignal } from "@/lib/telehealth-signaling";
 import { DBStore } from "@/lib/db-store";
-import { IncomingCallSignal, Patient } from "@/types/medical-schema";
+import { Patient } from "@/types/medical-schema";
 
 export default function PatientLayout({
   children,
@@ -24,7 +25,7 @@ export default function PatientLayout({
   const [activePatientId, setActivePatientId] = useState("PAT-10842");
 
   // Telehealth Active Room State
-  const [activeCallSignal, setActiveCallSignal] = useState<IncomingCallSignal | null>(null);
+  const [activeCallSignal, setActiveCallSignal] = useState<TelehealthSignal | null>(null);
   const [activePatient, setActivePatient] = useState<Patient | null>(null);
 
   useEffect(() => {
@@ -34,30 +35,27 @@ export default function PatientLayout({
   }, [user, isLoading, router]);
 
   useEffect(() => {
-    const id = user?.patientId || localStorage.getItem("LANT_ACTIVE_PATIENT_ID") || "PAT-10842";
-    setActivePatientId(id);
-    const p = DBStore.getPatientById(id) || DBStore.getPatients()[0];
-    setActivePatient(p);
-
-    const handlePatientChange = (e: any) => {
-      if (e.detail) {
-        setActivePatientId(e.detail);
-        const updatedP = DBStore.getPatientById(e.detail);
-        if (updatedP) setActivePatient(updatedP);
-      }
-    };
-
-    window.addEventListener("LANT_PATIENT_CHANGED", handlePatientChange);
-    return () => window.removeEventListener("LANT_PATIENT_CHANGED", handlePatientChange);
+    if (user) {
+      const id = user.patientId || user.id;
+      setActivePatientId(id);
+      const p = DBStore.getPatientById(id) || DBStore.getPatients().find(pt => pt.id === id);
+      if (p) setActivePatient(p);
+    }
   }, [user]);
 
-  const handleAcceptCall = (signal: IncomingCallSignal) => {
+  const handleAcceptCall = (signal: TelehealthSignal) => {
     setActiveCallSignal(signal);
   };
 
   const handleCloseTelehealthRoom = () => {
-    if (activePatient) {
-      DBStore.clearCallSignal(activePatient.id);
+    if (activePatient && activeCallSignal) {
+      TelehealthSignalingEngine.sendSignal({
+        type: "CALL_ENDED",
+        doctorId: activeCallSignal.doctorId,
+        patientId: activePatient.id,
+        timestamp: Date.now()
+      });
+      TelehealthSignalingEngine.clearActiveCall(activePatient.id);
     }
     setActiveCallSignal(null);
   };

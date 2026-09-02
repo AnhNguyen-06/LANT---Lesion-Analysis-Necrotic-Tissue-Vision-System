@@ -8,6 +8,7 @@ import { RecoveryChart } from "@/components/recovery-chart";
 import { TelehealthCallModal } from "@/components/telehealth-call-modal";
 import { ChatRoom } from "@/components/chat-room";
 import { DBStore } from "@/lib/db-store";
+import { TelehealthSignalingEngine } from "@/lib/telehealth-signaling";
 import { Patient, WoundProfile, SnapshotLog, ClinicianReview } from "@/types/medical-schema";
 import { useAuth } from "@/context/AuthContext";
 
@@ -75,16 +76,15 @@ export default function DoctorPatientReviewPage() {
 
   const handleInitiateTelehealthCall = () => {
     if (!patient || !activeWound) return;
-    // Dispatch call signal to patient
-    DBStore.sendCallSignal({
-      id: `CALL-${Date.now()}`,
-      callId: `ROOM-${patient.id}-${Date.now()}`,
+    
+    // Dispatch real-time cross-tab signal to patient
+    TelehealthSignalingEngine.sendSignal({
+      type: "CALL_INITIATED",
       doctorId: user?.id || "USR-DOC-01",
       doctorName: user?.fullName || "BS. CKI Trần Minh Đức",
       patientId: patient.id,
       woundTitle: activeWound.title,
-      status: "calling",
-      startedAt: new Date().toISOString()
+      timestamp: Date.now()
     });
 
     setShowTelehealthModal(true);
@@ -408,7 +408,15 @@ export default function DoctorPatientReviewPage() {
           isOpen={showTelehealthModal}
           onClose={() => {
             setShowTelehealthModal(false);
-            if (patient) DBStore.clearCallSignal(patient.id);
+            if (patient) {
+              TelehealthSignalingEngine.sendSignal({
+                type: "CALL_ENDED",
+                doctorId: user?.id || "USR-DOC-01",
+                patientId: patient.id,
+                timestamp: Date.now()
+              });
+              TelehealthSignalingEngine.clearActiveCall(patient.id);
+            }
           }}
           patient={patient}
           wound={activeWound}

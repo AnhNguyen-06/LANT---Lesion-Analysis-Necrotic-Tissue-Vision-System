@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { RYBMetrics, CalibrationData } from "@/types/medical-schema";
 
 interface WoundCanvasProps {
-  imageUrl?: string;
+  imageUrl?: string | null;
   rybMetrics: RYBMetrics;
   calibration?: CalibrationData;
   totalAreaCm2: number;
@@ -31,10 +31,30 @@ export function WoundCanvas({
   const [showContours, setShowContours] = useState(true);
   const [showGrid, setShowGrid] = useState(true);
   const [showArUco, setShowArUco] = useState(true);
-  const [opacity, setOpacity] = useState(70); // 0 to 100%
+  const [opacity, setOpacity] = useState(65); // 0 to 100%
   const [zoomLevel, setZoomLevel] = useState(1);
 
-  // Render Canvas when layers or metrics change
+  // Image loading state
+  const [loadedImage, setLoadedImage] = useState<HTMLImageElement | null>(null);
+
+  useEffect(() => {
+    if (!imageUrl) {
+      setLoadedImage(null);
+      return;
+    }
+
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      setLoadedImage(img);
+    };
+    img.onerror = () => {
+      setLoadedImage(null);
+    };
+    img.src = imageUrl;
+  }, [imageUrl]);
+
+  // Render Canvas when layers, image, or metrics change
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -47,26 +67,47 @@ export function WoundCanvas({
     // Clear Canvas
     ctx.clearRect(0, 0, width, height);
 
-    // 1. Draw Raw Background / Simulated Clinical Skin Base
+    // 1. Draw Raw Image Background or Simulated Clinical Base
     if (showRaw) {
-      const skinGrad = ctx.createRadialGradient(
-        width / 2, height / 2, 50,
-        width / 2, height / 2, width * 0.7
-      );
-      skinGrad.addColorStop(0, "#F5D0C5");
-      skinGrad.addColorStop(0.7, "#E2A999");
-      skinGrad.addColorStop(1, "#CA8E7D");
-      ctx.fillStyle = skinGrad;
-      ctx.fillRect(0, 0, width, height);
+      if (loadedImage) {
+        // Draw the real captured/uploaded photo to fill canvas with cover aspect ratio
+        const imgRatio = loadedImage.width / loadedImage.height;
+        const canvasRatio = width / height;
+        let drawWidth = width;
+        let drawHeight = height;
+        let offsetX = 0;
+        let offsetY = 0;
 
-      // Add skin texture micro-dots
-      ctx.fillStyle = "rgba(180, 120, 100, 0.15)";
-      for (let i = 0; i < 400; i++) {
-        const rx = (Math.sin(i * 99) * 0.5 + 0.5) * width;
-        const ry = (Math.cos(i * 33) * 0.5 + 0.5) * height;
-        ctx.beginPath();
-        ctx.arc(rx, ry, 1 + (i % 2), 0, Math.PI * 2);
-        ctx.fill();
+        if (imgRatio > canvasRatio) {
+          drawWidth = height * imgRatio;
+          offsetX = -(drawWidth - width) / 2;
+        } else {
+          drawHeight = width / imgRatio;
+          offsetY = -(drawHeight - height) / 2;
+        }
+
+        ctx.drawImage(loadedImage, offsetX, offsetY, drawWidth, drawHeight);
+      } else {
+        // Fallback: Clinical skin radial gradient
+        const skinGrad = ctx.createRadialGradient(
+          width / 2, height / 2, 50,
+          width / 2, height / 2, width * 0.7
+        );
+        skinGrad.addColorStop(0, "#F5D0C5");
+        skinGrad.addColorStop(0.7, "#E2A999");
+        skinGrad.addColorStop(1, "#CA8E7D");
+        ctx.fillStyle = skinGrad;
+        ctx.fillRect(0, 0, width, height);
+
+        // Add skin texture micro-dots
+        ctx.fillStyle = "rgba(180, 120, 100, 0.15)";
+        for (let i = 0; i < 400; i++) {
+          const rx = (Math.sin(i * 99) * 0.5 + 0.5) * width;
+          const ry = (Math.cos(i * 33) * 0.5 + 0.5) * height;
+          ctx.beginPath();
+          ctx.arc(rx, ry, 1 + (i % 2), 0, Math.PI * 2);
+          ctx.fill();
+        }
       }
     } else {
       ctx.fillStyle = "#0F172A"; // Dark diagnostic mode
@@ -75,7 +116,7 @@ export function WoundCanvas({
 
     // 2. Draw Calibration Grid if enabled
     if (showGrid) {
-      ctx.strokeStyle = "rgba(0, 43, 140, 0.12)";
+      ctx.strokeStyle = "rgba(0, 43, 140, 0.15)";
       ctx.lineWidth = 1;
       const step = 30;
       for (let x = 0; x < width; x += step) {
@@ -114,7 +155,7 @@ export function WoundCanvas({
       ctx.closePath();
     };
 
-    // 3.1 Outer Pink Epithelial Ring
+    // 3.1 Outer Pink Epithelial Ring (Closure)
     if (showEpithelial && rybMetrics.pinkPercent > 0) {
       ctx.save();
       createOrganicPath(woundRadiusX * 1.08, woundRadiusY * 1.08, 1);
@@ -123,7 +164,7 @@ export function WoundCanvas({
       ctx.restore();
     }
 
-    // 3.2 Granulation Bed (Red)
+    // 3.2 Granulation Bed (Red Viable Tissue)
     if (showGranulation && rybMetrics.redPercent > 0) {
       ctx.save();
       createOrganicPath(woundRadiusX * 0.95, woundRadiusY * 0.95, 2);
@@ -132,7 +173,7 @@ export function WoundCanvas({
       ctx.restore();
     }
 
-    // 3.3 Slough Fibrin Patches (Yellow)
+    // 3.3 Slough Fibrin Patches (Yellow Bio-film)
     if (showSlough && rybMetrics.yellowPercent > 0) {
       const sloughCount = Math.max(2, Math.round(rybMetrics.yellowPercent / 12));
       ctx.save();
@@ -148,7 +189,7 @@ export function WoundCanvas({
       ctx.restore();
     }
 
-    // 3.4 Necrotic Core / Eschar (Black)
+    // 3.4 Necrotic Core / Eschar (Black Dead Tissue)
     if (showNecrotic && rybMetrics.blackPercent > 0) {
       ctx.save();
       createOrganicPath(
@@ -161,7 +202,7 @@ export function WoundCanvas({
       ctx.restore();
     }
 
-    // 4. Draw Wound Contours / Perimeter
+    // 4. Draw Wound Contours / Perimeter (Boundary)
     if (showContours) {
       ctx.save();
       const points = 32;
@@ -195,7 +236,7 @@ export function WoundCanvas({
       ctx.fillRect(arucoX, arucoY, arucoSize, arucoSize);
       ctx.strokeRect(arucoX, arucoY, arucoSize, arucoSize);
 
-      // ArUco 4x4 inner matrix dots
+      // ArUco 4x4 inner matrix patterns
       ctx.fillStyle = "#000000";
       ctx.fillRect(arucoX + 6, arucoY + 6, 12, 12);
       ctx.fillRect(arucoX + 30, arucoY + 6, 12, 12);
@@ -220,7 +261,8 @@ export function WoundCanvas({
     showArUco,
     opacity,
     rybMetrics,
-    zoomLevel
+    zoomLevel,
+    loadedImage
   ]);
 
   return (
@@ -254,151 +296,127 @@ export function WoundCanvas({
             <button
               onClick={() => setZoomLevel(1)}
               className="px-2.5 py-1 rounded-lg text-slate-300 hover:text-white text-xs font-mono font-bold"
-              title="Đặt lại zoom"
+              title="Khôi phục"
             >
               1:1
             </button>
           </div>
         </div>
 
-        {/* The HTML5 Canvas */}
-        <div className="overflow-hidden flex items-center justify-center p-2 min-h-[360px]">
+        {/* Main Canvas Component */}
+        <div className="flex items-center justify-center p-2 bg-slate-950 overflow-hidden">
           <canvas
             ref={canvasRef}
-            width={600}
-            height={440}
-            style={{ transform: `scale(${zoomLevel})`, transformOrigin: "center center" }}
-            className="w-full max-h-[460px] object-contain rounded-2xl transition-transform duration-150"
+            width={720}
+            height={480}
+            style={{ transform: `scale(${zoomLevel})`, transition: "transform 0.15s ease-out" }}
+            className="rounded-2xl max-w-full h-auto shadow-2xl"
           />
         </div>
 
-        {/* Bottom Status Overlay */}
+        {/* Bottom Telemetry Bar Over Canvas */}
         <div className="absolute bottom-4 left-4 right-4 z-10 flex items-center justify-between pointer-events-none">
-          <div className="pointer-events-auto bg-slate-900/90 backdrop-blur-md px-4 py-1.5 rounded-xl flex items-center gap-3 text-xs shadow-md">
-            <span className="text-[11px] font-bold text-slate-400">WHI:</span>
-            <span className={`font-mono font-bold ${whiScore >= 70 ? 'text-emerald-400' : whiScore >= 40 ? 'text-amber-400' : 'text-red-400'}`}>
-              {whiScore} / 100
-            </span>
-            <span className="text-slate-700">|</span>
-            <span className="text-[11px] text-slate-300">
-              Độ chuẩn xác: <span className="text-cyan-300 font-mono font-bold">98.4%</span>
-            </span>
+          <div className="pointer-events-auto bg-slate-900/90 backdrop-blur-md px-3.5 py-1.5 rounded-xl text-[11px] font-mono text-slate-300 shadow-md flex items-center gap-3">
+            <span>WHI: <strong className="text-cyan-300">{whiScore} / 100</strong></span>
+            <span className="text-slate-600">|</span>
+            <span>Độ chuẩn xác: <strong className="text-emerald-400">{calibration?.confidenceScore || 98.4}%</strong></span>
           </div>
         </div>
-
       </div>
 
-      {/* Layer Toggle Controls */}
+      {/* Layer Visibility Controls - Pure Typography */}
       {interactive && (
-        <div className="rounded-3xl bg-white/95 p-5 shadow-clinical space-y-4 border border-oceanic-100/70">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-oceanic uppercase tracking-wider font-heading">
-              Bật/tắt lớp bóc tách mô học (RYB Layers)
-            </span>
-
-            {/* Opacity Slider */}
+        <div className="rounded-3xl bg-white/95 p-6 shadow-clinical border border-oceanic-100/70 space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <h3 className="text-xs font-bold text-oceanic font-heading uppercase tracking-wider">
+              Lớp hiển thị phân tách mô học AI
+            </h3>
+            
             <div className="flex items-center gap-2">
-              <span className="text-[11px] font-semibold text-dusk-600">Độ trong suốt:</span>
+              <span className="text-[11px] text-slate-500 font-mono">Độ mờ: {opacity}%</span>
               <input
                 type="range"
                 min="10"
                 max="100"
                 value={opacity}
-                onChange={(e) => setOpacity(Number(e.target.value))}
-                className="w-20 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-oceanic"
+                onChange={(e) => setOpacity(parseInt(e.target.value))}
+                className="w-20 accent-oceanic"
               />
-              <span className="text-[11px] font-mono font-bold text-oceanic w-8">{opacity}%</span>
             </div>
           </div>
 
-          {/* Toggle Buttons Grid - Pure Typography */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
-            
-            {/* Raw */}
+          <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setShowRaw(!showRaw)}
-              className={`py-2 px-3 rounded-xl text-xs font-semibold transition-all ${
-                showRaw ? "bg-slate-900 text-white font-bold" : "bg-slate-100 text-slate-500 border border-slate-200"
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                showRaw ? "bg-slate-800 text-white shadow-2xs" : "bg-slate-100 text-slate-500 line-through"
               }`}
             >
               <span>Ảnh gốc</span>
             </button>
 
-            {/* Granulation (Red) */}
             <button
               onClick={() => setShowGranulation(!showGranulation)}
-              className={`py-2 px-3 rounded-xl text-xs font-semibold transition-all ${
-                showGranulation 
-                  ? "bg-red-50 text-red-700 border border-red-300 font-bold" 
-                  : "bg-slate-50 text-slate-400 border border-slate-200"
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                showGranulation ? "bg-red-600 text-white shadow-2xs" : "bg-slate-100 text-slate-500 line-through"
               }`}
             >
-              <span>Mô đỏ ({rybMetrics.redPercent}%)</span>
+              <span>Mô hạt đỏ ({rybMetrics.redPercent}%)</span>
             </button>
 
-            {/* Slough (Yellow) */}
             <button
               onClick={() => setShowSlough(!showSlough)}
-              className={`py-2 px-3 rounded-xl text-xs font-semibold transition-all ${
-                showSlough 
-                  ? "bg-amber-50 text-amber-800 border border-amber-300 font-bold" 
-                  : "bg-slate-50 text-slate-400 border border-slate-200"
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                showSlough ? "bg-amber-500 text-white shadow-2xs" : "bg-slate-100 text-slate-500 line-through"
               }`}
             >
-              <span>Vảy vàng ({rybMetrics.yellowPercent}%)</span>
+              <span>Mô vảy vàng ({rybMetrics.yellowPercent}%)</span>
             </button>
 
-            {/* Necrotic (Black) */}
             <button
               onClick={() => setShowNecrotic(!showNecrotic)}
-              className={`py-2 px-3 rounded-xl text-xs font-semibold transition-all ${
-                showNecrotic 
-                  ? "bg-slate-900 text-white border border-slate-700 font-bold" 
-                  : "bg-slate-50 text-slate-400 border border-slate-200"
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                showNecrotic ? "bg-slate-900 text-white shadow-2xs" : "bg-slate-100 text-slate-500 line-through"
               }`}
             >
-              <span>Hoại tử ({rybMetrics.blackPercent}%)</span>
+              <span>Hoại tử đen ({rybMetrics.blackPercent}%)</span>
             </button>
 
-            {/* Epithelial (Pink) */}
             <button
               onClick={() => setShowEpithelial(!showEpithelial)}
-              className={`py-2 px-3 rounded-xl text-xs font-semibold transition-all ${
-                showEpithelial 
-                  ? "bg-pink-50 text-pink-700 border border-pink-300 font-bold" 
-                  : "bg-slate-50 text-slate-400 border border-slate-200"
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                showEpithelial ? "bg-pink-500 text-white shadow-2xs" : "bg-slate-100 text-slate-500 line-through"
               }`}
             >
-              <span>Rìa hồng ({rybMetrics.pinkPercent}%)</span>
+              <span>Biểu bì hồng ({rybMetrics.pinkPercent}%)</span>
             </button>
 
-            {/* Contours */}
             <button
               onClick={() => setShowContours(!showContours)}
-              className={`py-2 px-3 rounded-xl text-xs font-semibold transition-all ${
-                showContours 
-                  ? "bg-oceanic-50 text-oceanic border border-oceanic-300 font-bold" 
-                  : "bg-slate-50 text-slate-400 border border-slate-200"
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                showContours ? "bg-oceanic text-white shadow-2xs" : "bg-slate-100 text-slate-500 line-through"
               }`}
             >
-              <span>Viền chu vi</span>
+              <span>Đường viền</span>
             </button>
 
-            {/* ArUco Grid */}
             <button
-              onClick={() => {
-                setShowGrid(!showGrid);
-                setShowArUco(!showArUco);
-              }}
-              className={`py-2 px-3 rounded-xl text-xs font-semibold transition-all ${
-                showGrid 
-                  ? "bg-emerald-50 text-emerald-800 border border-emerald-300 font-bold" 
-                  : "bg-slate-50 text-slate-400 border border-slate-200"
+              onClick={() => setShowArUco(!showArUco)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                showArUco ? "bg-emerald-600 text-white shadow-2xs" : "bg-slate-100 text-slate-500 line-through"
               }`}
             >
-              <span>Lưới ArUco</span>
+              <span>Thước ArUco</span>
             </button>
 
+            <button
+              onClick={() => setShowGrid(!showGrid)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                showGrid ? "bg-dusk text-white shadow-2xs" : "bg-slate-100 text-slate-500 line-through"
+              }`}
+            >
+              <span>Lưới tọa độ</span>
+            </button>
           </div>
         </div>
       )}

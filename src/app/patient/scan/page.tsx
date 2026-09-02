@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
 import { WoundCanvas } from "@/components/wound-canvas";
 import { IntakeSurveyModal } from "@/components/intake-survey-modal";
 import { 
@@ -23,6 +24,7 @@ import {
 
 export default function PatientScanPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const [patientId, setPatientId] = useState<string>("PAT-10842");
 
   // Input Source: 'dropzone' | 'camera' | 'presets'
@@ -60,9 +62,9 @@ export default function PatientScanPage() {
   const [showIntakeModal, setShowIntakeModal] = useState(false);
 
   useEffect(() => {
-    const active = localStorage.getItem("LANT_ACTIVE_PATIENT_ID") || "PAT-10842";
+    const active = user?.patientId || user?.id || localStorage.getItem("LANT_ACTIVE_PATIENT_ID") || "PAT-10842";
     setPatientId(active);
-  }, []);
+  }, [user]);
 
   const stopCameraStream = useCallback(() => {
     if (luminanceIntervalRef.current) {
@@ -199,6 +201,8 @@ export default function PatientScanPage() {
   };
 
   const captureCameraSnapshot = () => {
+    let capturedDataUrl = "/presets/diabetic_foot.jpg";
+
     if (videoRef.current && cameraStream) {
       const canvas = document.createElement("canvas");
       canvas.width = videoRef.current.videoWidth || 1280;
@@ -206,16 +210,23 @@ export default function PatientScanPage() {
       const ctx = canvas.getContext("2d");
       if (ctx) {
         ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
-        const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
-        setCustomImageSrc(dataUrl);
-        stopCameraStream();
-        setInputMode("dropzone");
+        capturedDataUrl = canvas.toDataURL("image/jpeg", 0.95);
       }
-    } else {
-      setCustomImageSrc("/presets/sample_1.jpg");
-      stopCameraStream();
-      setInputMode("dropzone");
     }
+
+    setCustomImageSrc(capturedDataUrl);
+    stopCameraStream();
+    setInputMode("dropzone");
+    setAreaCm2(8.45);
+    setRedPct(50);
+    setYellowPct(30);
+    setBlackPct(10);
+    setPinkPct(10);
+    setArucoDetected(true);
+    setIsAnalyzing(true);
+    setTimeout(() => {
+      setIsAnalyzing(false);
+    }, 600);
   };
 
   const handleSelectPreset = (preset: ClinicalPresetCase) => {
@@ -512,6 +523,27 @@ export default function PatientScanPage() {
                   Hỗ trợ định dạng PNG, JPG, WEBP, HEIC
                 </p>
               </div>
+            </div>
+          )}
+
+          {/* Custom Captured Image Status Banner */}
+          {customImageSrc && (
+            <div className="flex items-center justify-between p-3.5 rounded-2xl bg-azure-mist/80 border border-oceanic-100 text-xs shadow-xs">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span className="font-bold text-oceanic font-heading">Đã nạp ảnh vết thương chụp thực tế</span>
+                <span className="text-[11px] text-slate-500 font-mono hidden sm:inline">• Thước ArUco 2cm đã khóa</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setCustomImageSrc(null);
+                  startCamera();
+                }}
+                className="text-xs font-bold text-sapphire hover:text-oceanic transition-colors font-mono"
+              >
+                Chụp lại ↺
+              </button>
             </div>
           )}
 

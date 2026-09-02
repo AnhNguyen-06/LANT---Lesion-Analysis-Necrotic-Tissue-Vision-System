@@ -16,8 +16,25 @@ export default function PatientTelehealthPage() {
   const [activeTab, setActiveTab] = useState<"appointments" | "chat">("appointments");
 
   useEffect(() => {
-    const activeId = user?.patientId || localStorage.getItem("LANT_ACTIVE_PATIENT_ID") || "PAT-10842";
-    const p = DBStore.getPatientById(activeId) || DBStore.getPatients()[0];
+    const activeId = user?.patientId || user?.id || "PAT-10842";
+    let p = DBStore.getPatientById(activeId);
+    if (!p && user) {
+      p = {
+        id: user.patientId || user.id,
+        fullName: user.fullName,
+        email: user.email,
+        phone: user.phone || "Chưa cập nhật",
+        age: user.dob ? Math.max(1, new Date().getFullYear() - new Date(user.dob).getFullYear()) : 45,
+        gender: user.gender || "Nam",
+        medicalRecordNumber: user.medicalRecordNumber || "MRN-2026-0001",
+        address: user.address,
+        primaryPhysician: "BS. CKI Trần Minh Đức",
+        riskTier: "low",
+        wounds: []
+      };
+    } else if (!p) {
+      p = DBStore.getPatients()[0];
+    }
     setPatient(p);
 
     if (p && p.wounds.length > 0) {

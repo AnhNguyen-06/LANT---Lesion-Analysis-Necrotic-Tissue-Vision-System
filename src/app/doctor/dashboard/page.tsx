@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { DBStore } from "@/lib/db-store";
+import { TelehealthSignalingEngine } from "@/lib/telehealth-signaling";
 import { Patient, TelehealthSession } from "@/types/medical-schema";
 import { useAuth } from "@/context/AuthContext";
 import { TelehealthCallModal } from "@/components/telehealth-call-modal";
@@ -57,15 +58,13 @@ export default function DoctorDashboardPage() {
     if (patient.wounds.length === 0) return;
     const wound = patient.wounds[0];
 
-    DBStore.sendCallSignal({
-      id: `CALL-${Date.now()}`,
-      callId: `ROOM-${patient.id}-${Date.now()}`,
+    TelehealthSignalingEngine.sendSignal({
+      type: "CALL_INITIATED",
       doctorId: user?.id || "USR-DOC-01",
       doctorName: user?.fullName || "BS. CKI Trần Minh Đức",
       patientId: patient.id,
       woundTitle: wound.title,
-      status: "calling",
-      startedAt: new Date().toISOString()
+      timestamp: Date.now()
     });
 
     setCallingPatient(patient);
@@ -311,7 +310,15 @@ export default function DoctorDashboardPage() {
         <TelehealthCallModal
           isOpen={!!callingPatient}
           onClose={() => {
-            DBStore.clearCallSignal(callingPatient.id);
+            if (callingPatient) {
+              TelehealthSignalingEngine.sendSignal({
+                type: "CALL_ENDED",
+                doctorId: user?.id || "USR-DOC-01",
+                patientId: callingPatient.id,
+                timestamp: Date.now()
+              });
+              TelehealthSignalingEngine.clearActiveCall(callingPatient.id);
+            }
             setCallingPatient(null);
           }}
           patient={callingPatient}

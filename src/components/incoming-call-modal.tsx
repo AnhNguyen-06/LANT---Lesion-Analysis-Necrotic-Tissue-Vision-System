@@ -1,120 +1,192 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { DBStore } from "@/lib/db-store";
-import { IncomingCallSignal } from "@/types/medical-schema";
+import { TelehealthSignalingEngine, TelehealthSignal } from "@/lib/telehealth-signaling";
 
 interface IncomingCallModalProps {
-  onAcceptCall: (signal: IncomingCallSignal) => void;
+  onAcceptCall: (signal: TelehealthSignal) => void;
 }
 
 export function IncomingCallModal({ onAcceptCall }: IncomingCallModalProps) {
   const { user } = useAuth();
-  const [activeSignal, setActiveSignal] = useState<IncomingCallSignal | null>(null);
+  const [activeSignal, setActiveSignal] = useState<TelehealthSignal | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const ringtoneIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Play synthesized gentle medical chime ringtone
+  const startRingtone = useCallback(() => {
+    if (typeof window === "undefined") return;
+
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      audioContextRef.current = ctx;
+
+      const playChime = () => {
+        if (!audioContextRef.current || audioContextRef.current.state === "closed") return;
+        const now = audioContextRef.current.currentTime;
+        
+        // High note
+        const osc1 = audioContextRef.current.createOscillator();
+        const gain1 = audioContextRef.current.createGain();
+        osc1.type = "sine";
+        osc1.frequency.setValueAtTime(659.25, now); // E5
+        gain1.gain.setValueAtTime(0.08, now);
+        gain1.gain.exponentialRampToValueAtTime(0.0001, now + 0.5);
+        osc1.connect(gain1);
+        gain1.connect(audioContextRef.current.destination);
+        osc1.start(now);
+        osc1.stop(now + 0.5);
+
+        // Harmonizing note
+        const osc2 = audioContextRef.current.createOscillator();
+        const gain2 = audioContextRef.current.createGain();
+        osc2.type = "sine";
+        osc2.frequency.setValueAtTime(880.0, now + 0.15); // A5
+        gain2.gain.setValueAtTime(0.08, now + 0.15);
+        gain2.gain.exponentialRampToValueAtTime(0.0001, now + 0.7);
+        osc2.connect(gain2);
+        gain2.connect(audioContextRef.current.destination);
+        osc2.start(now + 0.15);
+        osc2.stop(now + 0.7);
+      };
+
+      playChime();
+      ringtoneIntervalRef.current = setInterval(playChime, 2400);
+    } catch {
+      // Audio autoplay policy fallback
+    }
+  }, []);
+
+  const stopRingtone = useCallback(() => {
+    if (ringtoneIntervalRef.current) {
+      clearInterval(ringtoneIntervalRef.current);
+      ringtoneIntervalRef.current = null;
+    }
+    if (audioContextRef.current && audioContextRef.current.state !== "closed") {
+      audioContextRef.current.close().catch(() => {});
+      audioContextRef.current = null;
+    }
+  }, []);
 
   useEffect(() => {
     if (!user || user.role !== "PATIENT") return;
 
-    const checkSignal = () => {
-      const sig = DBStore.getCallSignal(user.id);
-      if (sig && sig.status === "calling") {
-        setActiveSignal(sig);
-      } else {
-        setActiveSignal(null);
+    const myPatientId = user.patientId || user.id;
+
+    // Check initial active call from storage
+    const existingCall = TelehealthSignalingEngine.getActiveCall(myPatientId);
+    if (existingCall && existingCall.type === "CALL_INITIATED") {
+      setActiveSignal(existingCall);
+      startRingtone();
+    }
+
+    // Subscribe to real-time signals (BroadcastChannel + StorageEvent)
+    const unsubscribe = TelehealthSignalingEngine.subscribe((signal) => {
+      if (signal.patientId === myPatientId) {
+        if (signal.type === "CALL_INITIATED") {
+          setActiveSignal(signal);
+          startRingtone();
+        } else if (signal.type === "CALL_ENDED" || signal.type === "CALL_DECLINED") {
+          setActiveSignal(null);
+          stopRingtone();
+        }
       }
-    };
-
-    checkSignal();
-
-    const handleIncomingCall = (e: CustomEvent<IncomingCallSignal>) => {
-      if (e.detail.patientId === user.id && e.detail.status === "calling") {
-        setActiveSignal(e.detail);
-      }
-    };
-
-    const handleCallCleared = () => {
-      setActiveSignal(null);
-    };
-
-    window.addEventListener("LANT_INCOMING_CALL" as any, handleIncomingCall);
-    window.addEventListener("LANT_CALL_CLEARED" as any, handleCallCleared);
-
-    const interval = setInterval(checkSignal, 1500);
+    });
 
     return () => {
-      window.removeEventListener("LANT_INCOMING_CALL" as any, handleIncomingCall);
-      window.removeEventListener("LANT_CALL_CLEARED" as any, handleCallCleared);
-      clearInterval(interval);
+      unsubscribe();
+      stopRingtone();
     };
-  }, [user]);
+  }, [user, startRingtone, stopRingtone]);
 
-  if (!activeSignal) return null;
+  if (!activeSignal || activeSignal.type !== "CALL_INITIATED") return null;
 
   const handleAccept = () => {
     if (!user) return;
-    const acceptedSignal: IncomingCallSignal = {
-      ...activeSignal,
-      status: "accepted"
-    };
-    DBStore.sendCallSignal(acceptedSignal);
+    stopRingtone();
+    const myPatientId = user.patientId || user.id;
+
+    TelehealthSignalingEngine.sendSignal({
+      type: "CALL_ACCEPTED",
+      doctorId: activeSignal.doctorId,
+      patientId: myPatientId,
+      timestamp: Date.now()
+    });
+
+    const accepted = { ...activeSignal };
     setActiveSignal(null);
-    onAcceptCall(acceptedSignal);
+    onAcceptCall(accepted);
   };
 
   const handleDecline = () => {
     if (!user) return;
-    DBStore.clearCallSignal(user.id);
+    stopRingtone();
+    const myPatientId = user.patientId || user.id;
+
+    TelehealthSignalingEngine.sendSignal({
+      type: "CALL_DECLINED",
+      doctorId: activeSignal.doctorId,
+      patientId: myPatientId,
+      reason: "Bệnh nhân bận",
+      timestamp: Date.now()
+    });
+
+    TelehealthSignalingEngine.clearActiveCall(myPatientId);
     setActiveSignal(null);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md animate-in fade-in">
-      <div className="w-full max-w-md bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-oceanic-100 space-y-6 text-center animate-in zoom-in-95">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in font-sans">
+      <div className="w-full max-w-md bg-white rounded-3xl p-7 sm:p-8 shadow-2xl border border-oceanic-100 space-y-6 text-center animate-in zoom-in-95 relative overflow-hidden">
         
-        {/* Calling Header */}
-        <div className="space-y-2">
-          <span className="inline-block px-3 py-1 bg-oceanic-50 text-oceanic rounded-full text-xs font-bold font-mono uppercase tracking-wider border border-oceanic-200">
-            Cuộc gọi Telehealth trực tuyến
-          </span>
-          
-          <h2 className="text-xl font-black text-oceanic font-heading">
-            Cuộc gọi video đến
-          </h2>
-          <p className="text-xs text-dusk-500">
-            Bác sĩ đang yêu cầu kết nối phòng hội chẩn trực tuyến
-          </p>
+        {/* Animated Pulsing Ring */}
+        <div className="relative mx-auto w-24 h-24 flex items-center justify-center">
+          <div className="absolute inset-0 rounded-full bg-emerald-500/20 animate-ping"></div>
+          <div className="absolute inset-2 rounded-full bg-emerald-500/30 animate-pulse"></div>
+          <div className="relative w-16 h-16 rounded-full bg-emerald-600 text-white flex items-center justify-center text-2xl font-black shadow-lg font-heading">
+            {activeSignal.doctorName ? activeSignal.doctorName.charAt(0) : "D"}
+          </div>
         </div>
 
-        {/* Doctor Info Card */}
-        <div className="p-4 rounded-2xl bg-azure-mist/60 border border-oceanic-100 space-y-1">
-          <p className="text-sm font-bold text-oceanic font-heading">
-            {activeSignal.doctorName || "BS. CKI Trần Minh Đức"}
-          </p>
-          <p className="text-xs text-slate-500">
-            Chuyên khoa Chăm sóc Vết thương & Phẫu thuật Chấn thương
+        {/* Calling Info */}
+        <div className="space-y-1.5">
+          <span className="inline-block px-3 py-1 bg-emerald-50 text-emerald-800 rounded-full text-xs font-mono font-bold uppercase tracking-wider border border-emerald-200">
+            Cuộc gọi video đến
+          </span>
+          <h2 className="text-xl sm:text-2xl font-black text-oceanic font-heading pt-1">
+            {activeSignal.doctorName || "Bác sĩ chuyên khoa"}
+          </h2>
+          <p className="text-xs text-dusk-500">
+            Bác sĩ đang yêu cầu kết nối phòng hội chẩn Telehealth trực tuyến
           </p>
           {activeSignal.woundTitle && (
-            <p className="text-[11px] text-sapphire font-mono font-medium pt-1">
-              Hồ sơ: {activeSignal.woundTitle}
-            </p>
+            <div className="pt-2">
+              <span className="inline-block px-3 py-1 bg-azure-mist text-oceanic text-xs font-bold rounded-xl border border-oceanic-100 font-mono">
+                Hồ sơ: {activeSignal.woundTitle}
+              </span>
+            </div>
           )}
         </div>
 
         {/* Action Controls */}
         <div className="grid grid-cols-2 gap-3 pt-2">
           <button
+            type="button"
             onClick={handleDecline}
-            className="py-3 px-4 rounded-2xl bg-slate-100 text-slate-700 text-xs font-bold hover:bg-red-50 hover:text-red-700 hover:border-red-200 border border-slate-200 transition-all"
+            className="py-3.5 px-4 rounded-2xl bg-slate-100 hover:bg-red-50 hover:text-red-700 hover:border-red-200 text-slate-700 text-xs font-bold border border-slate-200 transition-all"
           >
             <span>Từ chối</span>
           </button>
 
           <button
+            type="button"
             onClick={handleAccept}
-            className="py-3 px-4 rounded-2xl bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 shadow-md transition-all flex items-center justify-center gap-1.5"
+            className="py-3.5 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md transition-all flex items-center justify-center gap-1.5"
           >
-            <span>Tham gia hội chẩn →</span>
+            <span>Chấp nhận & Tham gia →</span>
           </button>
         </div>
 

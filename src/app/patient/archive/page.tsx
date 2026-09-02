@@ -2,16 +2,26 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { MockStorageService } from "@/lib/mock-storage";
+import { DBStore } from "@/lib/db-store";
+import { useAuth } from "@/context/AuthContext";
 import { Patient, WoundProfile } from "@/types/medical-schema";
 
 export default function PatientArchivePage() {
+  const { user } = useAuth();
   const [healedWounds, setHealedWounds] = useState<Array<{ wound: WoundProfile; patient: Patient }>>([]);
 
   useEffect(() => {
-    const list = MockStorageService.getPatients();
+    const list = DBStore.getPatients();
+    const myPatientId = user?.patientId || user?.id;
+    const targetPatients = user ? list.filter(p => p.id === myPatientId) : list;
+    
+    // If current patient has no healed wounds, show general healed demo cases for reference
+    const patientsToScan = targetPatients.length > 0 && targetPatients.some(p => p.wounds.some(w => w.status === "healed" || w.currentAreaCm2 <= 0.1))
+      ? targetPatients
+      : list;
+
     const healedList: Array<{ wound: WoundProfile; patient: Patient }> = [];
-    list.forEach(p => {
+    patientsToScan.forEach(p => {
       p.wounds.forEach(w => {
         if (w.status === "healed" || w.currentAreaCm2 <= 0.1 || w.currentWHI >= 95) {
           healedList.push({ wound: w, patient: p });
@@ -19,7 +29,7 @@ export default function PatientArchivePage() {
       });
     });
     setHealedWounds(healedList);
-  }, []);
+  }, [user]);
 
   return (
     <main className="mx-auto max-w-7xl w-full px-4 sm:px-6 lg:px-8 py-10 space-y-10 font-sans">

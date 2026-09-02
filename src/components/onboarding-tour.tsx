@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { DBStore } from "@/lib/db-store";
 
 interface TourStep {
   title: string;
@@ -88,6 +90,7 @@ const DOCTOR_STEPS: TourStep[] = [
 ];
 
 export function OnboardingTour() {
+  const router = useRouter();
   const { user, completeTour } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
@@ -133,11 +136,23 @@ export function OnboardingTour() {
   const handleComplete = () => {
     completeTour();
     setIsOpen(false);
+    if (user && user.role === "PATIENT") {
+      const p = DBStore.getPatientById(user.patientId || user.id);
+      if (!p || p.wounds.length === 0) {
+        router.push("/patient/scan");
+      }
+    }
   };
 
   const handleSkip = () => {
     completeTour();
     setIsOpen(false);
+    if (user && user.role === "PATIENT") {
+      const p = DBStore.getPatientById(user.patientId || user.id);
+      if (!p || p.wounds.length === 0) {
+        router.push("/patient/scan");
+      }
+    }
   };
 
   return (
